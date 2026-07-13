@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DESCENT — build a neural net by hand</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <canvas id="gl"></canvas>
+    <div id="app">
+      <main id="views">
+        <div id="nav">
+          <button class="nav-btn" id="nav-asc" hidden>
+            <span class="chev">‹</span>ascend
+          </button>
+          <button class="nav-btn" id="nav-desc">
+            descend<span class="chev">›</span>
+          </button>
+        </div>
+        <section class="view" data-view="0" id="view-0">
+          <header class="view-label"><span class="num">01</span>input space</header>
+          <button class="focus-btn" data-view="0" title="focus this layer">⛶</button>
+          <div class="view-weights" id="weights-0"></div>
+          <footer class="view-formula">x ∈ ℝ³</footer>
+        </section>
+        <section class="view" data-view="1" id="view-1">
+          <header class="view-label"><span class="num">02</span>hidden layer 1</header>
+          <button class="focus-btn" data-view="1" title="focus this layer">⛶</button>
+          <div class="view-weights" id="weights-1"></div>
+          <footer class="view-formula">a¹ = tanh(W¹x + b¹)</footer>
+        </section>
+        <section class="view" data-view="2" id="view-2">
+          <header class="view-label"><span class="num">03</span>hidden layer 2</header>
+          <button class="focus-btn" data-view="2" title="focus this layer">⛶</button>
+          <div class="view-weights" id="weights-2"></div>
+          <div class="view-hint" id="hint-2">empty — add a unit to hidden 2</div>
+          <footer class="view-formula">a² = tanh(W²a¹ + b²)</footer>
+        </section>
+      </main>
+      <aside id="panel"></aside>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
