@@ -1,9 +1,6 @@
 import type { Net, Unit } from './network';
 import { MAX_UNITS, outSpaceIndex } from './network';
-
-export const UNIT_COLORS = ['#c084fc', '#4ade80', '#f472b6'];
-export const OUT_COLOR = '#fbbf24';
-export const CLASS_COLORS = ['#2fa8ff', '#ff8a3d'];
+import { UNIT_COLORS, OUT_COLOR } from './theme';
 
 export interface UICallbacks {
   /** layer 0 | 1 = hidden layers, 2 = output unit (idx ignored). */
