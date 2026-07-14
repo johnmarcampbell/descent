@@ -21,6 +21,23 @@ npm install
 npm run dev
 ```
 
+## Mobile prototypes
+
+`mobile.html` hosts two experimental touch-first interfaces over the same
+modules — pick one on first visit, or force one with `?proto=deck` /
+`?proto=board` (each has a switcher in its controls):
+
+- **A · Deck** — immersive. One layer fills the screen; the adjacent layer
+  runs live in a minimap inset (tap it to jump). ‹ › chevrons page through
+  the spaces; controls live in a pull-up sheet.
+- **B · Board** — cockpit. The two-layer window stacked vertically (edit the
+  top pane, watch the bottom react), tabs slide the window, and the full
+  control board stays on screen.
+
+Both share `Session`, `Stage`, and `DragController` with the desktop app;
+only the adapters differ (touch drag with enlarged hit spheres, sheet/tab
+layouts instead of the grid).
+
 ## How it maps to a real MLP
 
 - **Architecture**: input ℝ³ → hidden 1 (1–3 tanh units) → hidden 2 (0–3 tanh
