@@ -66,6 +66,20 @@ export class Stage {
     return this.entriesList;
   }
 
+  // --- DragSurface ---
+
+  cellRect(view: number): DOMRect {
+    return this.cells[view].getBoundingClientRect();
+  }
+
+  camera(view: number): THREE.Camera {
+    return this.vp.views[view].camera;
+  }
+
+  setViewInteraction(view: number, on: boolean): void {
+    this.vp.views[view].controls.enabled = on;
+  }
+
   /** Master plane visibility for hidden units ('unit') or the output ('out'). */
   setPlaneEnabled(kind: 'unit' | 'out', on: boolean): void {
     this.showPlanes[kind] = on;

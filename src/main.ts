@@ -1,8 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { Stage } from './viz/stage';
-import type { StageEntry } from './viz/stage';
-import { W_SCALE } from './viz/arrow';
+import { DragController } from './drag';
 import { DATASET_NAMES } from './datasets';
 import { Session } from './session';
 import type { LayerIndex } from './session';
@@ -111,27 +110,9 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowRight') setDepth(depth + 1);
 });
 
-// ---------- dragging ----------
+// ---------- dragging: desktop pointer adapter over DragController ----------
 
-const raycaster = new THREE.Raycaster();
-const ndc = new THREE.Vector2();
-const dragPlane = new THREE.Plane();
-const camDir = new THREE.Vector3();
-const hitPoint = new THREE.Vector3();
-
-let drag: StageEntry | null = null;
-
-function raycastEntries(view: number, e: PointerEvent): StageEntry | null {
-  const rect = viewEls[view].getBoundingClientRect();
-  ndc.set(
-    ((e.clientX - rect.left) / rect.width) * 2 - 1,
-    -((e.clientY - rect.top) / rect.height) * 2 + 1,
-  );
-  raycaster.setFromCamera(ndc, stage.vp.views[view].camera);
-  const hits = stage.entries.filter((en) => en.view === view).map((en) => en.gizmo.hit);
-  const found = raycaster.intersectObjects(hits, false);
-  return found.length > 0 ? (found[0].object.userData.entry as StageEntry) : null;
-}
+const dragger = new DragController(session, stage);
 
 function viewIndexOf(e: Event): number {
   const cell = (e.target as HTMLElement).closest?.('.view') as HTMLElement | null;
@@ -147,36 +128,17 @@ viewsEl.addEventListener(
     stage.vp.views.forEach((v) => { v.controls.autoRotate = false; });
     const view = viewIndexOf(e);
     if (view < 0) return;
-    const entry = raycastEntries(view, e);
-    if (!entry) return;
+    if (!dragger.begin(view, e.clientX, e.clientY)) return;
 
     e.stopPropagation();
-    drag = entry;
-    stage.vp.views[view].controls.enabled = false;
-    stage.vp.views[view].camera.getWorldDirection(camDir);
-    dragPlane.setFromNormalAndCoplanarPoint(camDir, entry.gizmo.hit.position);
-    entry.gizmo.setHighlight(true);
     document.body.style.cursor = 'grabbing';
   },
   true,
 );
 
 window.addEventListener('pointermove', (e: PointerEvent) => {
-  if (drag) {
-    const view = drag.view;
-    const rect = viewEls[view].getBoundingClientRect();
-    ndc.set(
-      ((e.clientX - rect.left) / rect.width) * 2 - 1,
-      -((e.clientY - rect.top) / rect.height) * 2 + 1,
-    );
-    raycaster.setFromCamera(ndc, stage.vp.views[view].camera);
-    if (!raycaster.ray.intersectPlane(dragPlane, hitPoint)) return;
-
-    // Tip position → raw weight candidate; the session constrains it to the
-    // dims this space has and clamps ‖w‖.
-    session.setWeight(drag.layer, drag.idx, [
-      hitPoint.x / W_SCALE, hitPoint.y / W_SCALE, hitPoint.z / W_SCALE,
-    ]);
+  if (dragger.active) {
+    dragger.move(e.clientX, e.clientY);
     return;
   }
 
@@ -184,15 +146,13 @@ window.addEventListener('pointermove', (e: PointerEvent) => {
   if ((e.target as HTMLElement).closest?.('button')) return;
   const view = viewIndexOf(e);
   if (view >= 0) {
-    viewEls[view].style.cursor = raycastEntries(view, e) ? 'grab' : '';
+    viewEls[view].style.cursor = dragger.pick(view, e.clientX, e.clientY) ? 'grab' : '';
   }
 });
 
 window.addEventListener('pointerup', () => {
-  if (!drag) return;
-  drag.gizmo.setHighlight(false);
-  stage.vp.views[drag.view].controls.enabled = true;
-  drag = null;
+  if (!dragger.active) return;
+  dragger.end();
   document.body.style.cursor = '';
 });
 
