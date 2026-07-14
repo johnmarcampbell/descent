@@ -88,6 +88,19 @@ export class Stage {
     });
   }
 
+  /** Start the render loop. Points ease toward their targets (~70 ms
+   * exponential smoothing) unless the user prefers reduced motion. */
+  start(): void {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const clock = new THREE.Clock();
+    const loop = (): void => {
+      const dt = Math.min(clock.getDelta(), 0.1);
+      this.frame(reduceMotion ? 1 : 1 - Math.exp(-dt / 0.07));
+      requestAnimationFrame(loop);
+    };
+    loop();
+  }
+
   /** Advance animations and draw. k = easing factor for point motion, 0..1. */
   frame(k: number): void {
     this.clouds.forEach((c, i) => {

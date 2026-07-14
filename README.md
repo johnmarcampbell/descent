@@ -52,12 +52,30 @@ npm run dev
 
 ## Layout
 
+The modules are split so a second frontend (a dedicated mobile interface)
+can reuse the game, the 3D presentation, and the interaction math with its
+own adapters:
+
 - `src/network.ts` — model, forward pass, metrics. Pure, no three.js.
 - `src/datasets.ts` — generators (linked rings, nested spheres, twin helix,
   xor cube). All non-linearly-separable so hidden layers matter.
-- `src/viz/` — viewports, glowing point clouds, draggable arrow gizmos.
+- `src/session.ts` — the game session: owns net/data/result, every game
+  mutation, and coarse change notifications. Pure; runs headless.
+- `src/layerwindow.ts` — layer navigation as a pure state machine: a window
+  of consecutive views plus focus, answered as per-view roles.
+- `src/drag.ts` — weight-drag controller: client coordinates → ray →
+  camera-facing plane → weight candidate for the session. Depends on a
+  narrow `DragSurface` interface, not on the stage.
+- `src/viz/` — viewports, glowing point clouds, arrow gizmos, and the
+  `Stage` that composes them and keeps them in sync with the session.
+  Which DOM cells it draws into is constructor input.
+- `src/theme.ts` — shared palette.
 - `src/ui.ts` — right-hand control panel (bias sliders, add/remove unit,
   dataset picker, accuracy).
-- `src/main.ts` — state, drag interaction, render loop.
+- `src/desktop/` — desktop-only adapters: pointer-event drag wiring and the
+  nav-button/keyboard layout driver.
+- `src/main.ts` — desktop composition root: construct, wire, start.
 
+`npm test` runs the vitest suite — session rules, drag geometry, and
+navigation transitions are all exercised headless, no browser needed.
 `window.__descent` exposes internals for debugging/testing.
