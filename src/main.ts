@@ -3,19 +3,16 @@ import * as THREE from 'three';
 import { Viewports } from './viz/viewports';
 import { PointCloud } from './viz/pointcloud';
 import { ArrowGizmo, W_SCALE } from './viz/arrow';
-import {
-  makeNet, forward, allocResult, sanitize, outSpaceIndex, spaceDims, randomUnit,
-  MAX_W, MIN_W,
-} from './network';
-import type { Net, Unit } from './network';
-import { generate, DATASET_NAMES, N_POINTS } from './datasets';
+import { outSpaceIndex } from './network';
+import type { Unit } from './network';
+import { DATASET_NAMES, N_POINTS } from './datasets';
+import { Session } from './session';
+import type { LayerIndex } from './session';
 import { Panel, UNIT_COLORS, OUT_COLOR, CLASS_COLORS } from './ui';
 
 // ---------- state ----------
 
-let data = generate('rings');
-const net: Net = makeNet();
-const res = allocResult(N_POINTS);
+const session = new Session('rings');
 
 const classA = new THREE.Color(CLASS_COLORS[0]);
 const classB = new THREE.Color(CLASS_COLORS[1]);
@@ -33,7 +30,7 @@ const vp = new Viewports(canvas, viewEls);
 const clouds = [new PointCloud(N_POINTS), new PointCloud(N_POINTS), new PointCloud(N_POINTS)];
 clouds.forEach((c, i) => {
   c.setPixelRatio(vp.renderer.getPixelRatio());
-  c.setColors(data.y, classA, classB);
+  c.setColors(session.data.y, classA, classB);
   vp.views[i].scene.add(c.object);
 });
 
@@ -42,7 +39,8 @@ clouds.forEach((c, i) => {
 interface Entry {
   gizmo: ArrowGizmo;
   unit: Unit;
-  space: 0 | 1 | 2; // which space the weight vector lives in (drag constraints)
+  layer: LayerIndex; // session address of the unit …
+  idx: number;       // … within its layer
   view: number;
   isOut: boolean;
 }
@@ -50,12 +48,12 @@ interface Entry {
 let entries: Entry[] = [];
 const showPlanes = { unit: false, out: true };
 
-function addGizmo(unit: Unit, color: string, space: 0 | 1 | 2, view: number, planeSize: number, planeOpacity: number): void {
+function addGizmo(layer: LayerIndex, idx: number, color: string, view: number, planeSize: number, planeOpacity: number): void {
   const gizmo = new ArrowGizmo(color, planeSize, planeOpacity);
   vp.views[view].scene.add(gizmo.group);
-  const isOut = unit === net.out;
+  const isOut = layer === 2;
   gizmo.setPlaneEnabled(isOut ? showPlanes.out : showPlanes.unit);
-  const entry: Entry = { gizmo, unit, space, view, isOut };
+  const entry: Entry = { gizmo, unit: session.unitAt(layer, idx), layer, idx, view, isOut };
   gizmo.hit.userData.entry = entry;
   entries.push(entry);
 }
@@ -64,11 +62,12 @@ function rebuildGizmos(): void {
   entries.forEach((e) => e.gizmo.dispose());
   entries = [];
 
-  net.hidden[0].forEach((u, i) => addGizmo(u, UNIT_COLORS[i], 0, 0, 3.4, 0.08));
-  net.hidden[1].forEach((u, i) => addGizmo(u, UNIT_COLORS[i], 1, 1, 2.4, 0.08));
+  const net = session.net;
+  net.hidden[0].forEach((_, i) => addGizmo(0, i, UNIT_COLORS[i], 0, 3.4, 0.08));
+  net.hidden[1].forEach((_, i) => addGizmo(1, i, UNIT_COLORS[i], 1, 2.4, 0.08));
 
   const os = outSpaceIndex(net);
-  addGizmo(net.out, OUT_COLOR, os, os, 2.4, 0.16);
+  addGizmo(2, 0, OUT_COLOR, os, 2.4, 0.16);
 
   const hasH2 = net.hidden[1].length > 0;
   clouds[2].object.visible = hasH2;
@@ -78,48 +77,46 @@ function rebuildGizmos(): void {
   weightsEls[2].textContent = hasH2 ? 'arrow: output weights' : '';
 }
 
-// ---------- forward pass ----------
+// ---------- session → presentation ----------
 
-function recompute(): void {
-  sanitize(net);
-  forward(net, data.X, data.y, N_POINTS, res);
-  clouds[0].setTargets(data.X);
-  clouds[1].setTargets(res.h1);
-  clouds[2].setTargets(res.h2);
+function refreshValues(): void {
+  clouds[0].setTargets(session.data.X);
+  clouds[1].setTargets(session.res.h1);
+  clouds[2].setTargets(session.res.h2);
   entries.forEach((e) => e.gizmo.update(e.unit.w, e.unit.b));
-  panel.updateScore(res.accuracy, res.loss);
+  panel.updateScore(session.res.accuracy, session.res.loss);
 }
+
+session.subscribe((change) => {
+  if (change === 'structure') {
+    rebuildGizmos();
+    panel.renderStructure(session.net);
+  } else if (change === 'dataset') {
+    clouds.forEach((c) => c.setColors(session.data.y, classA, classB));
+  }
+  refreshValues();
+});
 
 // ---------- panel ----------
 
-const panel = new Panel(document.getElementById('panel')!, DATASET_NAMES, 'rings', {
+const panel = new Panel(document.getElementById('panel')!, DATASET_NAMES, session.datasetName, {
   onBias(layer, idx, value) {
-    const unit = layer === 2 ? net.out : net.hidden[layer as 0 | 1][idx];
-    unit.b = value;
-    recompute();
+    session.setBias(layer as LayerIndex, idx, value);
   },
   onAddUnit(layer) {
-    net.hidden[layer as 0 | 1].push(randomUnit());
-    structureChanged();
+    session.addUnit(layer as 0 | 1);
     // A first hidden-2 unit opens a new space (and the output arrow moves
     // there) — bring it into view.
-    if (layer === 1 && net.hidden[1].length === 1) setDepth(1);
+    if (layer === 1 && session.net.hidden[1].length === 1) setDepth(1);
   },
   onRemoveUnit(layer, idx) {
-    net.hidden[layer as 0 | 1].splice(idx, 1);
-    structureChanged();
+    session.removeUnit(layer as 0 | 1, idx);
   },
   onDataset(name) {
-    data = generate(name);
-    clouds.forEach((c) => c.setColors(data.y, classA, classB));
-    recompute();
+    session.setDataset(name);
   },
   onReset() {
-    for (const layer of net.hidden) {
-      layer.forEach((u, i) => { layer[i] = randomUnit(); });
-    }
-    net.out = randomUnit();
-    structureChanged();
+    session.randomize();
   },
   onTogglePlane(kind, on) {
     showPlanes[kind] = on;
@@ -128,13 +125,6 @@ const panel = new Panel(document.getElementById('panel')!, DATASET_NAMES, 'rings
     });
   },
 });
-
-function structureChanged(): void {
-  sanitize(net);
-  rebuildGizmos();
-  panel.renderStructure(net);
-  recompute();
-}
 
 // ---------- layer navigation & focus ----------
 // Two consecutive spaces are on screen at a time: [depth, depth + 1]. In
@@ -259,18 +249,11 @@ window.addEventListener('pointermove', (e: PointerEvent) => {
     raycaster.setFromCamera(ndc, vp.views[view].camera);
     if (!raycaster.ray.intersectPlane(dragPlane, hitPoint)) return;
 
-    // Tip position → weight vector, constrained to the dims this space has.
-    const dims = spaceDims(net, drag.space);
-    const w: number[] = [hitPoint.x / W_SCALE, hitPoint.y / W_SCALE, hitPoint.z / W_SCALE];
-    for (let d = dims; d < 3; d++) w[d] = 0;
-    let norm = Math.hypot(w[0], w[1], w[2]);
-    if (norm < 1e-4) return;
-    const clamped = Math.max(MIN_W, Math.min(MAX_W, norm));
-    const s = clamped / norm;
-    drag.unit.w[0] = w[0] * s;
-    drag.unit.w[1] = w[1] * s;
-    drag.unit.w[2] = w[2] * s;
-    recompute();
+    // Tip position → raw weight candidate; the session constrains it to the
+    // dims this space has and clamps ‖w‖.
+    session.setWeight(drag.layer, drag.idx, [
+      hitPoint.x / W_SCALE, hitPoint.y / W_SCALE, hitPoint.z / W_SCALE,
+    ]);
     return;
   }
 
@@ -292,9 +275,9 @@ window.addEventListener('pointerup', () => {
 
 // ---------- boot & render loop ----------
 
-panel.renderStructure(net);
+panel.renderStructure(session.net);
 rebuildGizmos();
-recompute();
+refreshValues();
 setDepth(0);
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -317,5 +300,11 @@ frame();
 
 // Debug/testing handle (harmless in production; the app has no secrets).
 Object.defineProperty(window, '__descent', {
-  value: { net, vp, getEntries: () => entries, getResult: () => res },
+  value: {
+    session,
+    net: session.net,
+    vp,
+    getEntries: () => entries,
+    getResult: () => session.res,
+  },
 });
