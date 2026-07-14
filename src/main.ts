@@ -2,6 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import { Stage } from './viz/stage';
 import { DragController } from './drag';
+import { LayerWindow } from './layerwindow';
 import { DATASET_NAMES } from './datasets';
 import { Session } from './session';
 import type { LayerIndex } from './session';
@@ -27,7 +28,7 @@ const panel = new Panel(document.getElementById('panel')!, DATASET_NAMES, sessio
     session.addUnit(layer as 0 | 1);
     // A first hidden-2 unit opens a new space (and the output arrow moves
     // there) — bring it into view.
-    if (layer === 1 && session.net.hidden[1].length === 1) setDepth(1);
+    if (layer === 1 && session.net.hidden[1].length === 1) layers.reveal(2);
   },
   onRemoveUnit(layer, idx) {
     session.removeUnit(layer as 0 | 1, idx);
@@ -48,66 +49,53 @@ session.subscribe((change) => {
   panel.updateScore(session.res.accuracy, session.res.loss);
 });
 
-// ---------- layer navigation & focus ----------
-// Two consecutive spaces are on screen at a time: [depth, depth + 1]. In
-// focus mode one of them fills the area and the other becomes a minimap.
+// ---------- layer navigation & focus: desktop adapter over LayerWindow ----------
 
 const navAsc = document.getElementById('nav-asc') as HTMLButtonElement;
 const navDesc = document.getElementById('nav-desc') as HTMLButtonElement;
-let depth = 0;
-let focusPos: 0 | 1 | null = null; // offset of the focused view in the window
+const layers = new LayerWindow(3, 2);
 
-function updateLayout(): void {
-  viewsEl.classList.toggle('focus', focusPos !== null);
+const FOCUS_BTN: Record<string, [string, string]> = {
+  focused: ['⊟', 'back to split view'],
+  minimap: ['⤢', 'swap focus'],
+  default: ['⛶', 'focus this layer'],
+};
+
+function applyLayout(): void {
+  viewsEl.classList.toggle('focus', layers.focused);
   viewEls.forEach((el, i) => {
-    const visible = i === depth || i === depth + 1;
-    el.classList.toggle('offstage', !visible);
-    const isMinimap = focusPos !== null && visible && i - depth !== focusPos;
-    el.classList.toggle('minimap', isMinimap);
-
-    if (visible && i === depth + 1 && focusPos === null) el.dataset.pos = 'second';
+    const role = layers.roleOf(i);
+    el.classList.toggle('offstage', role === 'offstage');
+    el.classList.toggle('minimap', role === 'minimap');
+    if (role === 'second') el.dataset.pos = 'second';
     else delete el.dataset.pos;
 
     const btn = el.querySelector<HTMLButtonElement>('.focus-btn')!;
-    if (focusPos === null) {
-      btn.textContent = '⛶';
-      btn.title = 'focus this layer';
-    } else if (isMinimap) {
-      btn.textContent = '⤢';
-      btn.title = 'swap focus';
-    } else {
-      btn.textContent = '⊟';
-      btn.title = 'back to split view';
-    }
+    const [glyph, title] = FOCUS_BTN[role] ?? FOCUS_BTN.default;
+    btn.textContent = glyph;
+    btn.title = title;
   });
-  navAsc.hidden = depth === 0;
-  navDesc.hidden = depth === 1;
+  navAsc.hidden = !layers.canAscend;
+  navDesc.hidden = !layers.canDescend;
 }
 
-function setDepth(d: number): void {
-  depth = Math.max(0, Math.min(1, d));
-  updateLayout();
-}
+layers.subscribe(applyLayout);
 
-navAsc.addEventListener('click', () => setDepth(depth - 1));
-navDesc.addEventListener('click', () => setDepth(depth + 1));
+navAsc.addEventListener('click', () => layers.ascend());
+navDesc.addEventListener('click', () => layers.descend());
 
 viewEls.forEach((el, i) => {
   const btn = el.querySelector<HTMLButtonElement>('.focus-btn')!;
   // Keep the press from reaching OrbitControls on the cell.
   btn.addEventListener('pointerdown', (e) => e.stopPropagation());
-  btn.addEventListener('click', () => {
-    const pos = (i - depth) as 0 | 1;
-    focusPos = focusPos === pos ? null : pos;
-    updateLayout();
-  });
+  btn.addEventListener('click', () => layers.toggleFocus(i));
 });
 
 window.addEventListener('keydown', (e) => {
   const tag = (document.activeElement as HTMLElement | null)?.tagName;
   if (tag === 'INPUT' || tag === 'SELECT') return; // sliders use arrow keys
-  if (e.key === 'ArrowLeft') setDepth(depth - 1);
-  else if (e.key === 'ArrowRight') setDepth(depth + 1);
+  if (e.key === 'ArrowLeft') layers.ascend();
+  else if (e.key === 'ArrowRight') layers.descend();
 });
 
 // ---------- dragging: desktop pointer adapter over DragController ----------
@@ -160,7 +148,7 @@ window.addEventListener('pointerup', () => {
 
 panel.renderStructure(session.net);
 panel.updateScore(session.res.accuracy, session.res.loss);
-setDepth(0);
+applyLayout();
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const clock = new THREE.Clock();
