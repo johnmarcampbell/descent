@@ -7,11 +7,17 @@ import type { Stage } from '../viz/stage';
 
 const TOUCH_HIT_SCALE = 2.4;
 
+export interface TouchDragOpts {
+  /** Called when a grab succeeds, before any weight changes (undo marks). */
+  onGrab?: () => void;
+}
+
 export function wireTouchDrag(
   dragger: DragController,
   stage: Stage,
   session: Session,
   container: HTMLElement,
+  opts: TouchDragOpts = {},
 ): void {
   const growHits = (): void => {
     stage.entries.forEach((e) => e.gizmo.hit.scale.setScalar(TOUCH_HIT_SCALE));
@@ -36,6 +42,7 @@ export function wireTouchDrag(
       const view = viewIndexOf(e);
       if (view < 0) return;
       if (!dragger.begin(view, e.clientX, e.clientY)) return;
+      opts.onGrab?.();
       e.stopPropagation();
       e.preventDefault();
     },

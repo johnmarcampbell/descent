@@ -10,6 +10,8 @@ export interface UICallbacks {
   onDataset(name: string): void;
   onReset(): void;
   onTogglePlane(kind: 'unit' | 'out', on: boolean): void;
+  onUndo(): void;
+  onRedo(): void;
 }
 
 export class Panel {
@@ -17,6 +19,8 @@ export class Panel {
   private readonly lossEl: HTMLElement;
   private readonly solvedEl: HTMLElement;
   private readonly layersEl: HTMLElement;
+  private undoBtn!: HTMLButtonElement;
+  private redoBtn!: HTMLButtonElement;
 
   constructor(
     root: HTMLElement,
@@ -59,6 +63,10 @@ export class Panel {
       </section>
       <div id="p-layers"></div>
       <section class="block foot">
+        <div class="undo-row">
+          <button class="btn" id="p-undo" disabled>↩ undo</button>
+          <button class="btn" id="p-redo" disabled>↪ redo</button>
+        </div>
         <button class="btn" id="p-reset">↻ randomize weights</button>
         <p class="help">
           drag an arrow tip to aim &amp; scale a weight · drag empty space to
@@ -77,6 +85,10 @@ export class Panel {
       this.cb.onDataset((e.target as HTMLSelectElement).value);
     });
     root.querySelector('#p-reset')!.addEventListener('click', () => this.cb.onReset());
+    this.undoBtn = root.querySelector<HTMLButtonElement>('#p-undo')!;
+    this.redoBtn = root.querySelector<HTMLButtonElement>('#p-redo')!;
+    this.undoBtn.addEventListener('click', () => this.cb.onUndo());
+    this.redoBtn.addEventListener('click', () => this.cb.onRedo());
 
     for (const kind of ['unit', 'out'] as const) {
       root.querySelector<HTMLInputElement>(`#p-plane-${kind}`)!.addEventListener('change', (e) => {
@@ -148,6 +160,11 @@ export class Panel {
       <output>${u.b.toFixed(2)}</output>
       ${x}
     </div>`;
+  }
+
+  setHistoryState(canUndo: boolean, canRedo: boolean): void {
+    this.undoBtn.disabled = !canUndo;
+    this.redoBtn.disabled = !canRedo;
   }
 
   updateScore(acc: number, loss: number): void {

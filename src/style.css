@@ -453,6 +453,9 @@ input[type='range']::-moz-range-thumb {
 }
 
 .btn:hover { color: var(--text); border-color: var(--dim); }
+.btn:disabled { opacity: 0.35; pointer-events: none; }
+.undo-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.undo-row .btn { flex: 1; }
 .btn.add { margin-top: 10px; align-self: flex-start; }
 
 .empty-note {

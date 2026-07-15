@@ -1,6 +1,7 @@
 import type { Session } from '../session';
 import { Stage } from '../viz/stage';
 import { LayerWindow } from '../layerwindow';
+import type { History } from '../history';
 import { MobileControls } from './controls';
 
 // Prototype B — BOARD. The cockpit: the two-layer window stacked vertically
@@ -13,7 +14,7 @@ const NAMES = ['input space', 'hidden layer 1', 'hidden layer 2'];
 const NUMS = ['01', '02', '03'];
 const FORMULAS = ['x ∈ ℝ³', 'a¹ = tanh(W¹x + b¹)', 'a² = tanh(W²a¹ + b²)'];
 
-export function bootBoard(app: HTMLElement, canvas: HTMLCanvasElement, session: Session): Stage {
+export function bootBoard(app: HTMLElement, canvas: HTMLCanvasElement, session: Session, history: History): Stage {
   app.innerHTML = `
     <div class="board">
       <nav class="board-tabs" id="b-tabs">
@@ -72,6 +73,7 @@ export function bootBoard(app: HTMLElement, canvas: HTMLCanvasElement, session: 
   new MobileControls(app.querySelector<HTMLElement>('#b-ctl')!, session, stage, {
     showScore: true,
     proto: 'board',
+    onGesture: () => history.mark(),
     onReveal: (view) => layers.reveal(view),
   });
 

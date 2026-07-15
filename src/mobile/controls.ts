@@ -18,6 +18,8 @@ export interface MobileControlsOpts {
   proto: ProtoName;
   /** Called after a structure change that opens a new space (first hidden-2 unit). */
   onReveal?: (view: number) => void;
+  /** Called at the start of any mutating gesture (undo marks). */
+  onGesture?: () => void;
 }
 
 const HELP: Record<ProtoName, string> = {
@@ -97,8 +99,12 @@ export class MobileControls {
     dsWrap.addEventListener('click', (e) => {
       const chip = (e.target as HTMLElement).closest('.chip') as HTMLElement | null;
       if (!chip) return;
+      opts.onGesture?.();
       session.setDataset(chip.dataset.ds!);
       syncChips();
+    });
+    session.subscribe((change) => {
+      if (change === 'dataset' || change === 'structure') syncChips();
     });
 
     // plane toggles
@@ -110,7 +116,10 @@ export class MobileControls {
       });
     });
 
-    root.querySelector('#mc-reset')!.addEventListener('click', () => session.randomize());
+    root.querySelector('#mc-reset')!.addEventListener('click', () => {
+      opts.onGesture?.();
+      session.randomize();
+    });
 
     // prototype switch — same page, different search param
     root.querySelectorAll<HTMLButtonElement>('[data-proto]').forEach((btn) => {
@@ -121,7 +130,15 @@ export class MobileControls {
       });
     });
 
-    // layer blocks: delegated slider + add/remove events
+    // layer blocks: delegated slider + add/remove events. A slider gesture
+    // marks history at first touch; mark() dedupes, so this is free.
+    this.layersEl.addEventListener(
+      'pointerdown',
+      (e) => {
+        if ((e.target as HTMLInputElement).type === 'range') opts.onGesture?.();
+      },
+      true,
+    );
     this.layersEl.addEventListener('input', (e) => {
       const t = e.target as HTMLInputElement;
       if (t.type !== 'range') return;
@@ -133,10 +150,12 @@ export class MobileControls {
       const t = (e.target as HTMLElement).closest('button');
       if (!t) return;
       if (t.classList.contains('add')) {
+        opts.onGesture?.();
         const layer = Number(t.dataset.layer) as 0 | 1;
         session.addUnit(layer);
         if (layer === 1 && session.net.hidden[1].length === 1) opts.onReveal?.(2);
       } else if (t.classList.contains('x')) {
+        opts.onGesture?.();
         session.removeUnit(Number(t.dataset.layer) as 0 | 1, Number(t.dataset.idx));
       }
     });

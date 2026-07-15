@@ -1,6 +1,7 @@
 import './mobile.css';
 import { Session } from '../session';
 import { DragController } from '../drag';
+import { History } from '../history';
 import { bootDeck } from './deck';
 import { bootBoard } from './board';
 import { wireTouchDrag } from './touch';
@@ -43,12 +44,13 @@ function chooser(): void {
 
 function boot(proto: ProtoName): void {
   const session = new Session('rings');
+  const history = new History(session);
   const stage = proto === 'deck'
-    ? bootDeck(app, canvas, session)
-    : bootBoard(app, canvas, session);
+    ? bootDeck(app, canvas, session, history)
+    : bootBoard(app, canvas, session, history);
 
   const dragger = new DragController(session, stage);
-  wireTouchDrag(dragger, stage, session, app);
+  wireTouchDrag(dragger, stage, session, app, { onGrab: () => history.mark() });
 
   stage.start();
 
@@ -58,6 +60,7 @@ function boot(proto: ProtoName): void {
       session,
       stage,
       dragger,
+      history,
       net: session.net,
       vp: stage.vp,
       getEntries: () => stage.entries,
