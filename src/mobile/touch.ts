@@ -1,6 +1,6 @@
 import type { DragController } from '../drag';
 import type { Session } from '../session';
-import type { Stage } from '../viz/stage';
+import type { Stage, StageEntry } from '../viz/stage';
 
 // Mobile adapter for the DragController: pointer events (which unify touch),
 // no hover affordance, and gizmo hit spheres scaled up to finger size.
@@ -8,8 +8,10 @@ import type { Stage } from '../viz/stage';
 const TOUCH_HIT_SCALE = 2.4;
 
 export interface TouchDragOpts {
-  /** Called when a grab succeeds, before any weight changes (undo marks). */
-  onGrab?: () => void;
+  /** Called when a grab succeeds, before any weight changes (undo marks, selection). */
+  onGrab?: (entry: StageEntry) => void;
+  /** Called after the drag ends and the controller released the entry. */
+  onRelease?: (entry: StageEntry) => void;
 }
 
 export function wireTouchDrag(
@@ -41,8 +43,9 @@ export function wireTouchDrag(
       stage.vp.views.forEach((v) => { v.controls.autoRotate = false; });
       const view = viewIndexOf(e);
       if (view < 0) return;
-      if (!dragger.begin(view, e.clientX, e.clientY)) return;
-      opts.onGrab?.();
+      const entry = dragger.begin(view, e.clientX, e.clientY);
+      if (!entry) return;
+      opts.onGrab?.(entry);
       e.stopPropagation();
       e.preventDefault();
     },
@@ -59,7 +62,12 @@ export function wireTouchDrag(
     { passive: false },
   );
 
-  const release = (): void => { if (dragger.active) dragger.end(); };
+  const release = (): void => {
+    const entry = dragger.active;
+    if (!entry) return;
+    dragger.end();
+    opts.onRelease?.(entry);
+  };
   window.addEventListener('pointerup', release);
   window.addEventListener('pointercancel', release);
 }

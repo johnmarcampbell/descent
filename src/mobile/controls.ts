@@ -1,6 +1,6 @@
 import type { Session } from '../session';
 import type { LayerIndex } from '../session';
-import type { Stage } from '../viz/stage';
+import type { Stage, StageEntry } from '../viz/stage';
 import type { Unit } from '../network';
 import { MAX_UNITS, outSpaceIndex } from '../network';
 import { DATASET_NAMES } from '../datasets';
@@ -11,6 +11,15 @@ import { UNIT_COLORS, OUT_COLOR } from '../theme';
 // where it's housed (bottom sheet vs. board) is the prototype's business.
 
 export type ProtoName = 'deck' | 'board';
+
+/** What a prototype hands back to the composition root for shared wiring. */
+export interface ProtoUI {
+  stage: Stage;
+  /** A vector was grabbed (selection hooks). */
+  onGrab?: (entry: StageEntry) => void;
+  /** A grab was released by the drag controller. */
+  onRelease?: (entry: StageEntry) => void;
+}
 
 export interface MobileControlsOpts {
   /** Include the score block (the deck shows score in its top bar instead). */
@@ -23,7 +32,7 @@ export interface MobileControlsOpts {
 }
 
 const HELP: Record<ProtoName, string> = {
-  deck: 'drag an <b>arrow tip</b> to aim a weight · one finger orbits · pinch zooms · <b>‹ ›</b> pages through layers · tap the <b>inset</b> to jump there',
+  deck: 'drag an <b>arrow tip</b> to aim a weight — grabbing also <b>selects</b> it for the quick bar up top · one finger orbits · pinch zooms · <b>‹ ›</b> pages through layers · tap the <b>inset</b> to jump there',
   board: 'drag an <b>arrow tip</b> to aim a weight · one finger orbits · pinch zooms · <b>tabs</b> choose the visible pair',
 };
 

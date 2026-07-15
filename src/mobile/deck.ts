@@ -1,7 +1,11 @@
-import type { Session } from '../session';
+import type { Session, LayerIndex } from '../session';
 import { Stage } from '../viz/stage';
+import type { StageEntry } from '../viz/stage';
 import type { History } from '../history';
+import { MAX_UNITS } from '../network';
+import { UNIT_COLORS, OUT_COLOR } from '../theme';
 import { MobileControls } from './controls';
+import type { ProtoUI } from './controls';
 
 // Prototype A — DECK. One layer fills the screen; the adjacent layer runs
 // live in a minimap inset (tap it to jump there). Chevrons page through the
@@ -18,7 +22,7 @@ function miniOf(s: number): number {
   return s < 2 ? s + 1 : 1;
 }
 
-export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: Session, history: History): Stage {
+export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: Session, history: History): ProtoUI {
   app.innerHTML = `
     <div class="deck-stagearea" id="deck-stage" style="position:fixed;inset:0;"></div>
     <div class="deck-stash" hidden></div>
@@ -38,6 +42,17 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
         </div>
       </div>
     </header>
+
+    <div class="deck-qc" id="deck-qc">
+      <div class="qc-sel pill" id="qc-sel" hidden>
+        <i class="swatch"></i>
+        <span class="qc-name" id="qc-name">—</span>
+        <input type="range" min="-3" max="3" step="0.01" id="qc-bias" aria-label="bias of selected vector" />
+        <output id="qc-val">0.00</output>
+        <button class="qc-x" id="qc-x">×</button>
+      </div>
+      <button class="qc-add pill" id="qc-add" title="add a vector to this space">+</button>
+    </div>
 
     <button class="chev-btn deck-prev" id="deck-prev" hidden>‹</button>
     <button class="chev-btn deck-next" id="deck-next">›</button>
@@ -110,6 +125,7 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
   function setS(next: number): void {
     s = Math.max(0, Math.min(2, next));
     layout();
+    renderQC(); // the + button targets the layer reading the current space
   }
 
   $('deck-prev').addEventListener('click', () => setS(s - 1));
@@ -135,7 +151,7 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
     mini.classList.toggle('rolled', miniRolled);
     miniRoll.textContent = miniRolled ? '▴' : '▾';
     const margin = 12;
-    const topY = app.querySelector('.deck-top')!.getBoundingClientRect().bottom + 6;
+    const topY = app.querySelector('#deck-qc')!.getBoundingClientRect().bottom + 8;
     const botY = window.innerHeight - (58 + sab + margin) - mini.offsetHeight;
     mini.style.left = `${miniCorner.includes('l') ? margin : window.innerWidth - mini.offsetWidth - margin}px`;
     mini.style.top = `${miniCorner.includes('t') ? topY : botY}px`;
@@ -244,7 +260,95 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
   });
   updateScore();
 
+  // --- selection & quick controls ---
+  // Grabbing a vector selects it; the quick bar under the title edits the
+  // selected vector's bias and deletes it, and + adds a sibling.
+
+  let sel: { layer: LayerIndex; idx: number } | null = null;
+  const qcSel = $('qc-sel');
+  const qcBias = $('qc-bias') as HTMLInputElement;
+  const qcVal = $('qc-val');
+  const qcX = $('qc-x') as HTMLButtonElement;
+  const qcAdd = $('qc-add') as HTMLButtonElement;
+
+  const qcColor = (l: LayerIndex, i: number): string => (l === 2 ? OUT_COLOR : UNIT_COLORS[i]);
+
+  function addTarget(): 0 | 1 | null {
+    if (sel && sel.layer < 2) return sel.layer as 0 | 1;
+    return s < 2 ? (s as 0 | 1) : null; // units *reading* the current space
+  }
+
+  function applyHighlight(): void {
+    stage.entries.forEach((en) => {
+      en.gizmo.setHighlight(sel !== null && en.layer === sel.layer && en.idx === sel.idx);
+    });
+  }
+
+  function renderQC(): void {
+    if (sel) {
+      const unit = session.unitAt(sel.layer, sel.idx);
+      qcSel.hidden = false;
+      qcSel.style.setProperty('--c', qcColor(sel.layer, sel.idx));
+      $('qc-name').textContent = sel.layer === 2 ? 'out' : `h${sel.layer + 1}·u${sel.idx + 1}`;
+      qcBias.value = String(unit.b);
+      qcVal.textContent = unit.b.toFixed(2);
+      qcX.hidden = sel.layer === 2; // the output unit can't be deleted
+    } else {
+      qcSel.hidden = true;
+    }
+    const target = addTarget();
+    qcAdd.disabled = target === null || session.net.hidden[target].length >= MAX_UNITS;
+  }
+
+  function select(layer: LayerIndex, idx: number): void {
+    sel = { layer, idx };
+    applyHighlight();
+    renderQC();
+  }
+
+  qcBias.addEventListener('pointerdown', () => history.mark());
+  qcBias.addEventListener('input', () => {
+    if (!sel) return;
+    const v = parseFloat(qcBias.value);
+    qcVal.textContent = v.toFixed(2);
+    session.setBias(sel.layer, sel.idx, v);
+  });
+
+  qcX.addEventListener('click', () => {
+    if (!sel || sel.layer === 2) return;
+    history.mark();
+    const dead = sel;
+    sel = null;
+    session.removeUnit(dead.layer as 0 | 1, dead.idx);
+  });
+
+  qcAdd.addEventListener('click', () => {
+    const layer = addTarget();
+    if (layer === null || session.net.hidden[layer].length >= MAX_UNITS) return;
+    history.mark();
+    session.addUnit(layer);
+    const idx = session.net.hidden[layer].length - 1;
+    // A first hidden-2 unit opens a new space — bring it into view.
+    if (layer === 1 && idx === 0) setS(2);
+    select(layer, idx);
+  });
+
+  session.subscribe((change) => {
+    if (change === 'structure') {
+      // The selected address may have died with the structure change.
+      if (sel && sel.layer !== 2 && sel.idx >= session.net.hidden[sel.layer].length) sel = null;
+      applyHighlight(); // gizmos were rebuilt
+    }
+    renderQC(); // bias may have changed under us (undo, sheet slider)
+  });
+
   layout();
+  renderQC();
   placeMini();
-  return stage;
+  return {
+    stage,
+    onGrab: (entry: StageEntry) => select(entry.layer, entry.idx),
+    // The drag controller un-highlights on release; selection persists.
+    onRelease: () => applyHighlight(),
+  };
 }
