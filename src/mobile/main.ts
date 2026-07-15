@@ -45,12 +45,19 @@ function chooser(): void {
 function boot(proto: ProtoName): void {
   const session = new Session('rings');
   const history = new History(session);
-  const stage = proto === 'deck'
+  const ui = proto === 'deck'
     ? bootDeck(app, canvas, session, history)
     : bootBoard(app, canvas, session, history);
+  const stage = ui.stage;
 
   const dragger = new DragController(session, stage);
-  wireTouchDrag(dragger, stage, session, app, { onGrab: () => history.mark() });
+  wireTouchDrag(dragger, stage, session, app, {
+    onGrab: (entry) => {
+      history.mark();
+      ui.onGrab?.(entry);
+    },
+    onRelease: (entry) => ui.onRelease?.(entry),
+  });
 
   stage.start();
 
