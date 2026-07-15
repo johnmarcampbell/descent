@@ -32,16 +32,58 @@ describe('Session', () => {
     expect(seen).toEqual(['values']);
   });
 
-  it('adding the first hidden-2 unit moves the output to space 2 and sanitizes', () => {
+  it('the first hidden-2 unit is promoted from the tuned output unit', () => {
     const s = new Session();
+    s.addUnit(0); // hidden-1: 2 units → output reads a 2-dim space
+    s.setWeight(2, 0, [0.8, -1.2, 0]);
+    s.setBias(2, 0, 0.7);
     const seen = collect(s);
-    s.net.out.w = [1, 1, 1];
+
     s.addUnit(1);
     expect(outSpaceIndex(s.net)).toBe(2);
-    // hidden-2 has one unit → the output reads a 1-dim space
-    expect(s.net.out.w[1]).toBe(0);
-    expect(s.net.out.w[2]).toBe(0);
+    // the player's tuned vector became the hidden-2 unit …
+    expect(s.net.hidden[1][0].w).toEqual([0.8, -1.2, 0]);
+    expect(s.net.hidden[1][0].b).toBe(0.7);
+    // … and the output restarted on the fresh 1-dim axis
+    expect(s.net.out.w).toEqual([1.6, 0, 0]);
+    expect(s.net.out.b).toBe(0);
     expect(seen).toEqual(['structure']);
+  });
+
+  it('promotion preserves every prediction exactly', () => {
+    const s = new Session();
+    s.addUnit(0);
+    s.setWeight(2, 0, [1.3, -0.9, 0]);
+    s.setBias(2, 0, -0.4);
+    const before = Array.from(s.res.p, (p) => (p > 0.5 ? 1 : 0));
+    const accBefore = s.res.accuracy;
+
+    s.addUnit(1);
+    const after = Array.from(s.res.p, (p) => (p > 0.5 ? 1 : 0));
+    expect(after).toEqual(before);
+    expect(s.res.accuracy).toBe(accBefore);
+  });
+
+  it('later hidden-2 units are random, not promotions', () => {
+    const s = new Session();
+    s.addUnit(1); // promotion happens here
+    s.setWeight(2, 0, [2, 0, 0]);
+    s.setBias(2, 0, 0.3);
+    s.addUnit(1); // second unit: plain add
+    expect(s.net.hidden[1]).toHaveLength(2);
+    // output untouched by a non-promoting add (modulo sanitize widening)
+    expect(s.net.out.w[0]).toBe(2);
+    expect(s.net.out.b).toBe(0.3);
+  });
+
+  it('hidden-1 adds never promote', () => {
+    const s = new Session();
+    s.setWeight(2, 0, [1.1, 0, 0]);
+    s.setBias(2, 0, 0.2);
+    s.addUnit(0);
+    expect(s.net.out.w[0]).toBe(1.1);
+    expect(s.net.out.b).toBe(0.2);
+    expect(s.net.hidden[1]).toHaveLength(0);
   });
 
   it('removing a unit re-sanitizes downstream weights', () => {

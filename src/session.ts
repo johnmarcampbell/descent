@@ -87,7 +87,20 @@ export class Session {
 
   addUnit(layer: 0 | 1): void {
     if (this.net.hidden[layer].length >= MAX_UNITS) return;
-    this.net.hidden[layer].push(randomUnit());
+
+    // The first hidden-2 unit *promotes* the output unit: the player tuned
+    // that vector against hidden-1's space, and this transition is the only
+    // thing that changes which space the output reads. The tuned vector
+    // becomes the new hidden unit and the output restarts on the fresh
+    // 1-dim axis with b = 0 — sign-preserving (p > ½ ⇔ same z > 0 as
+    // before), so predictions and accuracy carry over exactly.
+    if (layer === 1 && this.net.hidden[1].length === 0) {
+      this.net.hidden[1].push({ w: [...this.net.out.w], b: this.net.out.b });
+      this.net.out = { w: [1.6, 0, 0], b: 0 };
+    } else {
+      this.net.hidden[layer].push(randomUnit());
+    }
+
     this.recompute();
     this.notify('structure');
   }
