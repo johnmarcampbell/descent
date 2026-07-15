@@ -1,5 +1,6 @@
 import type { Session } from '../session';
 import { Stage } from '../viz/stage';
+import type { History } from '../history';
 import { MobileControls } from './controls';
 
 // Prototype A — DECK. One layer fills the screen; the adjacent layer runs
@@ -17,7 +18,7 @@ function miniOf(s: number): number {
   return s < 2 ? s + 1 : 1;
 }
 
-export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: Session): Stage {
+export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: Session, history: History): Stage {
   app.innerHTML = `
     <div class="deck-stagearea" id="deck-stage" style="position:fixed;inset:0;"></div>
     <div class="deck-stash" hidden></div>
@@ -29,7 +30,13 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
         <div class="formula" id="deck-formula">x ∈ ℝ³</div>
         <div class="deck-dots" id="deck-dots"><i class="on"></i><i></i><i></i></div>
       </div>
-      <div class="pill deck-score" id="deck-score">—<small>ACCURACY</small></div>
+      <div class="deck-right">
+        <div class="pill deck-score" id="deck-score">—<small>ACCURACY</small></div>
+        <div class="deck-undo-row">
+          <button class="pill deck-ubtn" id="deck-undo" disabled>↩</button>
+          <button class="pill deck-ubtn" id="deck-redo" disabled>↪</button>
+        </div>
+      </div>
     </header>
 
     <button class="chev-btn deck-prev" id="deck-prev" hidden>‹</button>
@@ -113,11 +120,25 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
   new MobileControls($('deck-sheet-body'), session, stage, {
     showScore: false,
     proto: 'deck',
+    onGesture: () => history.mark(),
     onReveal: (view) => {
       setS(view);
       sheet.classList.remove('open');
     },
   });
+
+  // undo / redo
+  const undoBtn = $('deck-undo') as HTMLButtonElement;
+  const redoBtn = $('deck-redo') as HTMLButtonElement;
+  undoBtn.addEventListener('click', () => history.undo());
+  redoBtn.addEventListener('click', () => history.redo());
+  const syncHistoryBtns = (): void => {
+    undoBtn.disabled = !history.canUndo;
+    redoBtn.disabled = !history.canRedo;
+  };
+  // canUndo can flip on any mutation, not only on history events.
+  history.subscribe(syncHistoryBtns);
+  session.subscribe(syncHistoryBtns);
 
   // score pill + grab-bar accuracy
   const score = $('deck-score');

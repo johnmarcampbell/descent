@@ -17,6 +17,17 @@ import { generate, N_POINTS } from './datasets';
 export type SessionChange = 'values' | 'structure' | 'dataset';
 export type SessionListener = (change: SessionChange) => void;
 
+/** A full game state: the whole network plus which dataset it's played on. */
+export interface Snapshot {
+  hidden: [Unit[], Unit[]];
+  out: Unit;
+  dataset: string;
+}
+
+function cloneUnit(u: Unit): Unit {
+  return { w: [u.w[0], u.w[1], u.w[2]], b: u.b };
+}
+
 /** Address of a unit: hidden layers are 0 | 1, the output unit is layer 2. */
 export type LayerIndex = 0 | 1 | 2;
 
@@ -116,6 +127,30 @@ export class Session {
     this._data = generate(name);
     this.recompute();
     this.notify('dataset');
+  }
+
+  /** Deep copy of the current game state, safe to hold across mutations. */
+  snapshot(): Snapshot {
+    return {
+      hidden: [this.net.hidden[0].map(cloneUnit), this.net.hidden[1].map(cloneUnit)],
+      out: cloneUnit(this.net.out),
+      dataset: this._datasetName,
+    };
+  }
+
+  /** Restore a snapshot taken earlier (the basis of undo/redo). */
+  restore(s: Snapshot): void {
+    const datasetChanged = s.dataset !== this._datasetName;
+    if (datasetChanged) {
+      this._datasetName = s.dataset;
+      this._data = generate(s.dataset);
+    }
+    this.net.hidden[0].splice(0, Infinity, ...s.hidden[0].map(cloneUnit));
+    this.net.hidden[1].splice(0, Infinity, ...s.hidden[1].map(cloneUnit));
+    this.net.out = cloneUnit(s.out);
+    this.recompute();
+    if (datasetChanged) this.notify('dataset');
+    this.notify('structure');
   }
 
   /** Re-randomize every weight and bias; the layer structure is kept. */

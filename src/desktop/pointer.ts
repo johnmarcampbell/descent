@@ -5,10 +5,16 @@ import type { Stage } from '../viz/stage';
 // hover cursors, and the first-interaction auto-rotate stop. A mobile
 // build wires touch gestures to the same controller instead.
 
+export interface PointerDragOpts {
+  /** Called when a grab succeeds, before any weight changes (undo marks). */
+  onGrab?: () => void;
+}
+
 export function wirePointerDrag(
   dragger: DragController,
   stage: Stage,
   viewsEl: HTMLElement,
+  opts: PointerDragOpts = {},
 ): void {
   const viewIndexOf = (e: Event): number => {
     const cell = (e.target as HTMLElement).closest?.('.view') as HTMLElement | null;
@@ -26,6 +32,7 @@ export function wirePointerDrag(
       if (view < 0) return;
       if (!dragger.begin(view, e.clientX, e.clientY)) return;
 
+      opts.onGrab?.();
       e.stopPropagation();
       document.body.style.cursor = 'grabbing';
     },
