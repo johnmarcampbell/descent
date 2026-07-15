@@ -279,8 +279,6 @@ html, body {
 .deck-mini {
   pointer-events: auto;
   position: fixed;
-  right: 12px;
-  bottom: calc(78px + var(--sab));
   z-index: 9;
   width: 33vw;
   max-width: 150px;
@@ -289,21 +287,42 @@ html, body {
   background: rgba(9, 12, 20, 0.55);
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
   overflow: hidden;
+  transition: left 0.24s cubic-bezier(0.32, 0.72, 0.22, 1), top 0.24s cubic-bezier(0.32, 0.72, 0.22, 1);
 }
+.deck-mini.dragging { transition: none; }
 .deck-mini .frame { position: relative; width: 100%; aspect-ratio: 5 / 6; }
+.deck-mini.rolled .frame { display: none; }
+.deck-mini .mini-bar {
+  display: flex;
+  align-items: stretch;
+  background: rgba(11, 15, 24, 0.9);
+  border-top: 1px solid var(--line);
+  touch-action: none;
+  cursor: grab;
+}
+.deck-mini.rolled .mini-bar { border-top: 0; }
 .deck-mini .tag {
-  display: block;
-  padding: 6px 9px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px 4px 8px 9px;
   font-size: 9px;
   letter-spacing: 0.14em;
   color: var(--dim);
-  background: rgba(11, 15, 24, 0.9);
-  border-top: 1px solid var(--line);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  align-self: center;
 }
 .deck-mini .tag b { color: var(--accent); font-weight: 500; }
+.mini-roll {
+  flex: 0 0 auto;
+  width: 32px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  font-size: 11px;
+}
 
 .deck-hint {
   position: fixed;

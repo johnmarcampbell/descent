@@ -46,7 +46,10 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
 
     <div class="deck-mini" id="deck-mini">
       <div class="frame" id="deck-mini-frame"></div>
-      <span class="tag" id="deck-mini-tag"></span>
+      <div class="mini-bar" id="deck-mini-bar">
+        <span class="tag" id="deck-mini-tag"></span>
+        <button class="mini-roll" id="deck-mini-roll">▾</button>
+      </div>
     </div>
 
     <div class="deck-sheet" id="deck-sheet">
@@ -111,11 +114,95 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
 
   $('deck-prev').addEventListener('click', () => setS(s - 1));
   $('deck-next').addEventListener('click', () => setS(s + 1));
-  $('deck-mini').addEventListener('click', () => setS(miniOf(s)));
+  miniFrame.addEventListener('click', () => setS(miniOf(s)));
 
-  // pull-up sheet
+  // --- minimap placement: drag by the bar, snap to a corner, roll up ---
+
+  const mini = $('deck-mini');
+  const miniBar = $('deck-mini-bar');
+  const miniRoll = $('deck-mini-roll') as HTMLButtonElement;
+  let miniCorner = localStorage.getItem('descent.miniCorner') ?? 'br';
+  let miniRolled = localStorage.getItem('descent.miniRolled') === '1';
+
+  // env(safe-area-inset-bottom) isn't readable directly; measure it once.
+  const sabProbe = document.createElement('div');
+  sabProbe.style.cssText = 'position:fixed;height:var(--sab);visibility:hidden;';
+  document.body.appendChild(sabProbe);
+  const sab = sabProbe.offsetHeight;
+  sabProbe.remove();
+
+  function placeMini(): void {
+    mini.classList.toggle('rolled', miniRolled);
+    miniRoll.textContent = miniRolled ? '▴' : '▾';
+    const margin = 12;
+    const topY = app.querySelector('.deck-top')!.getBoundingClientRect().bottom + 6;
+    const botY = window.innerHeight - (58 + sab + margin) - mini.offsetHeight;
+    mini.style.left = `${miniCorner.includes('l') ? margin : window.innerWidth - mini.offsetWidth - margin}px`;
+    mini.style.top = `${miniCorner.includes('t') ? topY : botY}px`;
+  }
+
+  let miniDrag: { sx: number; sy: number; bx: number; by: number; moved: boolean } | null = null;
+
+  miniBar.addEventListener('pointerdown', (e: PointerEvent) => {
+    if ((e.target as HTMLElement).closest('.mini-roll')) return;
+    e.stopPropagation();
+    e.preventDefault();
+    miniDrag = { sx: e.clientX, sy: e.clientY, bx: mini.offsetLeft, by: mini.offsetTop, moved: false };
+    mini.classList.add('dragging');
+  });
+  // Window-level tracking: a fast finger leaves the bar long before the
+  // browser would deliver the next move event to it.
+  window.addEventListener('pointermove', (e: PointerEvent) => {
+    if (!miniDrag) return;
+    const dx = e.clientX - miniDrag.sx;
+    const dy = e.clientY - miniDrag.sy;
+    if (Math.hypot(dx, dy) > 8) miniDrag.moved = true;
+    if (miniDrag.moved) {
+      mini.style.left = `${miniDrag.bx + dx}px`;
+      mini.style.top = `${miniDrag.by + dy}px`;
+    }
+  });
+  const miniDrop = (): void => {
+    if (!miniDrag) return;
+    mini.classList.remove('dragging');
+    if (miniDrag.moved) {
+      const r = mini.getBoundingClientRect();
+      miniCorner =
+        (r.top + r.height / 2 < window.innerHeight / 2 ? 't' : 'b') +
+        (r.left + r.width / 2 < window.innerWidth / 2 ? 'l' : 'r');
+      localStorage.setItem('descent.miniCorner', miniCorner);
+      placeMini();
+    } else {
+      setS(miniOf(s)); // a plain tap on the bar jumps, like the frame
+    }
+    miniDrag = null;
+  };
+  window.addEventListener('pointerup', miniDrop);
+  window.addEventListener('pointercancel', miniDrop);
+
+  miniRoll.addEventListener('click', () => {
+    miniRolled = !miniRolled;
+    localStorage.setItem('descent.miniRolled', miniRolled ? '1' : '0');
+    placeMini();
+  });
+
+  window.addEventListener('resize', placeMini);
+
+  // pull-up sheet — tap outside closes it (and swallows the tap so it
+  // can't orbit or grab a vector behind the sheet)
   const sheet = $('deck-sheet');
   $('deck-grab').addEventListener('click', () => sheet.classList.toggle('open'));
+  app.addEventListener(
+    'pointerdown',
+    (e: PointerEvent) => {
+      if (!sheet.classList.contains('open')) return;
+      if ((e.target as HTMLElement).closest('.deck-sheet')) return;
+      sheet.classList.remove('open');
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    },
+    true,
+  );
 
   new MobileControls($('deck-sheet-body'), session, stage, {
     showScore: false,
@@ -158,5 +245,6 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
   updateScore();
 
   layout();
+  placeMini();
   return stage;
 }
