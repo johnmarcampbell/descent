@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DESCENT</title>
     <!-- The app now lives at one URL and auto-detects the device. This old
-         mobile address forwards there, forcing the mobile view for anyone who
-         bookmarked it. -->
+         mobile address just forwards there. -->
     <script>
-      location.replace('./index.html?ui=mobile' + location.hash);
+      location.replace('./index.html' + location.hash);
     </script>
   </head>
   <body></body>

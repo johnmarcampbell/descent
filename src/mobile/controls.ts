@@ -5,7 +5,6 @@ import type { Unit } from '../network';
 import { MAX_UNITS, outSpaceIndex } from '../network';
 import { DATASET_NAMES } from '../datasets';
 import { UNIT_COLORS, OUT_COLOR } from '../theme';
-import { setMode } from '../ui-mode';
 
 // Touch-first controls shared by both mobile prototypes: fat sliders,
 // chip pickers, and a prototype switcher. An adapter over the session —
@@ -84,9 +83,6 @@ export class MobileControls {
       <section>
         <p class="mc-help">${HELP[opts.proto]}</p>
       </section>
-      <section>
-        <button class="switch-link" id="mc-view">↗ switch to desktop version</button>
-      </section>
     `;
 
     this.layersEl = root.querySelector('#mc-layers')!;
@@ -126,10 +122,6 @@ export class MobileControls {
       opts.onGesture?.();
       session.randomize();
     });
-
-    // escape hatch when auto-detection guessed wrong: persist the override
-    // and reload into the desktop interface.
-    root.querySelector('#mc-view')!.addEventListener('click', () => setMode('desktop'));
 
     // layer blocks: delegated slider + add/remove events. A slider gesture
     // marks history at first touch; mark() dedupes, so this is free.
