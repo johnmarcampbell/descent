@@ -9,6 +9,7 @@ import { Panel } from './ui';
 import { DATASET_NAMES } from './datasets';
 import { wireLayerNav } from './desktop/nav';
 import { wirePointerDrag } from './desktop/pointer';
+import { createIntro } from './intro';
 
 // Desktop composition root: construct the modules, wire them together,
 // start the loop. A mobile build is a sibling of this file — same session,
@@ -96,6 +97,9 @@ panel.updateScore(session.res.accuracy, session.res.loss);
 
 wireLayerNav(layers, viewsEl, viewEls, navAsc, navDesc);
 wirePointerDrag(dragger, stage, viewsEl, { onGrab: () => history.mark() });
+
+// How-to-play splash (first visit + a floating ? to reopen).
+document.body.appendChild(createIntro('desktop').button);
 
 stage.start();
 
