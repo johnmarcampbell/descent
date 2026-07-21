@@ -2,24 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
-    <title>DESCENT — mobile</title>
-    <link rel="icon" href="./favicon-32.png" sizes="32x32" type="image/png" />
-    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap"
-      rel="stylesheet"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DESCENT</title>
+    <!-- The app now lives at one URL and auto-detects the device. This old
+         mobile address forwards there, forcing the mobile view for anyone who
+         bookmarked it. -->
+    <script>
+      location.replace('./index.html?ui=mobile' + location.hash);
+    </script>
   </head>
-  <body>
-    <canvas id="gl"></canvas>
-    <div id="m-app"></div>
-    <script type="module" src="/src/mobile/main.ts"></script>
-  </body>
+  <body></body>
 </html>

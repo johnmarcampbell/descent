@@ -1,6 +1,7 @@
 import type { Net, Unit } from './network';
 import { MAX_UNITS, outSpaceIndex } from './network';
 import { UNIT_COLORS, OUT_COLOR } from './theme';
+import { setMode } from './ui-mode';
 
 export interface UICallbacks {
   /** layer 0 | 1 = hidden layers, 2 = output unit (idx ignored). */
@@ -73,6 +74,7 @@ export class Panel {
           orbit · scroll to zoom · <b>‹ ›</b> move between layers · the
           <b>gold</b> plane is the decision boundary
         </p>
+        <button class="switch-link" id="p-view">📱 switch to mobile version</button>
       </section>
     `;
 
@@ -85,6 +87,7 @@ export class Panel {
       this.cb.onDataset((e.target as HTMLSelectElement).value);
     });
     root.querySelector('#p-reset')!.addEventListener('click', () => this.cb.onReset());
+    root.querySelector('#p-view')!.addEventListener('click', () => setMode('mobile'));
     this.undoBtn = root.querySelector<HTMLButtonElement>('#p-undo')!;
     this.redoBtn = root.querySelector<HTMLButtonElement>('#p-redo')!;
     this.undoBtn.addEventListener('click', () => this.cb.onUndo());
