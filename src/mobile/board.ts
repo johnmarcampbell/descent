@@ -11,7 +11,7 @@ import type { ProtoUI } from './controls';
 // the same LayerWindow machine the desktop uses, with a pane adapter
 // instead of a grid adapter.
 
-const NAMES = ['input space', 'hidden layer 1', 'hidden layer 2'];
+const NAMES = ['input space', 'latent space 1', 'latent space 2'];
 const NUMS = ['01', '02', '03'];
 const FORMULAS = ['x ∈ ℝ³', 'a¹ = tanh(W¹x + b¹)', 'a² = tanh(W²a¹ + b²)'];
 
