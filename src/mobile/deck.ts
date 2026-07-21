@@ -36,14 +36,12 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
       </div>
       <div class="deck-right">
         <div class="pill deck-score" id="deck-score">—<small>ACCURACY</small></div>
-        <div class="deck-undo-row">
-          <button class="pill deck-ubtn" id="deck-undo" disabled>↩</button>
-          <button class="pill deck-ubtn" id="deck-redo" disabled>↪</button>
-        </div>
       </div>
     </header>
 
     <div class="deck-qc" id="deck-qc">
+      <button class="pill deck-ubtn" id="deck-undo" disabled>↩</button>
+      <button class="pill deck-ubtn" id="deck-redo" disabled>↪</button>
       <div class="qc-sel pill" id="qc-sel" hidden>
         <i class="swatch"></i>
         <span class="qc-name" id="qc-name">—</span>
