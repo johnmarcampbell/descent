@@ -38,24 +38,20 @@ export function createIntro(mode: Mode): Intro {
       <div class="intro-kicker">HOW TO PLAY</div>
       <h1 class="intro-title">DESCENT</h1>
       <p class="intro-lede">
-        A neural network is just planes slicing space until each class lands on
-        its own side — but here there's no training. You place the planes by
-        hand. Every <b>arrow</b> is a weight vector: aim it and a boundary plane
-        appears square to it; the <b>bias</b> slides that plane back and forth.
-        <b>Add units</b> to fold the space, descend layer by layer, and bend the
-        geometry until the two colours come apart.
+        The goal of DESCENT is to build a simple neural network that can classify
+        data as either red or blue. Add <b>weight vectors</b> to create and orient
+        planes that will slice the data in useful ways. Descend into deeper and
+        deeper <b>latent spaces</b> to view increasingly bizarre transformations
+        of the data. Push the <b>accuracy</b> as high as you can. Think like a machine.
       </p>
       <div class="intro-legend">
-        <div class="k">arrow tip</div><div class="v">drag to aim &amp; scale a weight</div>
-        <div class="k">bias slider</div><div class="v">slide the decision plane</div>
         <div class="k">+ add unit</div><div class="v">place a new neuron in a layer</div>
+        <div class="k">vector arrow</div><div class="v">drag to aim &amp; scale a weight</div>
+        <div class="k">bias slider</div><div class="v">slide the decision plane</div>
         <div class="k">orbit / zoom</div><div class="v">${g.orbit}</div>
         <div class="k">layers</div><div class="v">${g.layers}</div>
       </div>
-      <div class="intro-goal">
-        GOAL — push <b>accuracy</b> to 100%. That's the data separated by your own hand.
-      </div>
-      <button class="intro-start">${mode === 'mobile' ? 'tap to start' : 'click to start'}</button>
+      <button class="intro-start">start</button>
     </div>
   `;
   document.body.appendChild(overlay);
