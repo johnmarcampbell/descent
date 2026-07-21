@@ -5,6 +5,7 @@ import { History } from '../history';
 import { bootDeck } from './deck';
 import { bootBoard } from './board';
 import { wireTouchDrag } from './touch';
+import { createIntro } from '../intro';
 import type { ProtoName } from './controls';
 
 // Mobile composition root. The Deck is the shipping mobile interface; the
@@ -31,6 +32,12 @@ function boot(proto: ProtoName): void {
     },
     onRelease: (entry) => ui.onRelease?.(entry),
   });
+
+  // How-to-play splash (first visit + a ? in the top-right cluster).
+  const intro = createIntro('mobile');
+  const right = app.querySelector('.deck-right');
+  if (right) right.insertBefore(intro.button, right.firstChild);
+  else app.appendChild(intro.button);
 
   stage.start();
 
