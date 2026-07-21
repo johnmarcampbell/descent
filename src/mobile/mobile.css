@@ -67,24 +67,6 @@ html, body {
 .chev-btn:active { background: rgba(40, 50, 76, 0.9); }
 .chev-btn[hidden] { display: none; }
 
-/* ---------- switch-view link ---------- */
-
-.switch-link {
-  pointer-events: auto;
-  display: block;
-  width: 100%;
-  padding: 4px 0;
-  border: 0;
-  background: none;
-  color: var(--dim);
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-align: center;
-  cursor: pointer;
-}
-.switch-link:active { color: var(--accent); }
-
 /* ---------- mobile controls (shared by both prototypes) ---------- */
 
 .mc { font-size: 12px; }

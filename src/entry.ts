@@ -1,14 +1,13 @@
-import { resolveMode } from './ui-mode';
-
-// index.html loads this before anything else. It picks the interface for the
-// device and imports only that bundle, so desktop and mobile live at one URL.
+// index.html loads this before anything else. It detects the device and
+// imports only the matching bundle, so desktop and mobile live at one URL.
 // The desktop DOM ships inside index.html; on mobile we tear it down and stand
 // up the mobile shell, then hand off to the mobile composition root.
 
-const mode = resolveMode();
-document.documentElement.dataset.ui = mode;
+// A coarse pointer on a narrow screen is a phone (or small tablet) → the Deck.
+const isMobile = matchMedia('(pointer: coarse) and (max-width: 900px)').matches;
+document.documentElement.dataset.ui = isMobile ? 'mobile' : 'desktop';
 
-if (mode === 'mobile') {
+if (isMobile) {
   // The touch UI wants a locked viewport (no page zoom, safe-area insets).
   document
     .querySelector('meta[name="viewport"]')
