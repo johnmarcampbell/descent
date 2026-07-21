@@ -13,7 +13,7 @@ import type { ProtoUI } from './controls';
 // *reparented* between the fullscreen stage, the minimap frame, and an
 // offstage stash — the Stage only ever sees their rects.
 
-const NAMES = ['input space', 'hidden layer 1', 'hidden layer 2'];
+const NAMES = ['input space', 'latent space 1', 'latent space 2'];
 const NUMS = ['01', '02', '03'];
 const FORMULAS = ['x ∈ ℝ³', 'a¹ = tanh(W¹x + b¹)', 'a² = tanh(W²a¹ + b²)'];
 
@@ -111,7 +111,7 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
     ($('deck-next') as HTMLButtonElement).hidden = s === 2;
 
     const dir = m > s ? '↳' : '↖';
-    $('deck-mini-tag').innerHTML = `${dir} <b>${NUMS[m]}</b> ${NAMES[m].replace('hidden layer', 'hidden')}`;
+    $('deck-mini-tag').innerHTML = `${dir} <b>${NUMS[m]}</b> ${NAMES[m].replace('latent space', 'latent')}`;
     syncHint();
   }
 
