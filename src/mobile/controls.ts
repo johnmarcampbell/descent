@@ -5,6 +5,7 @@ import type { Unit } from '../network';
 import { MAX_UNITS, outSpaceIndex } from '../network';
 import { DATASET_NAMES } from '../datasets';
 import { UNIT_COLORS, OUT_COLOR } from '../theme';
+import { setMode } from '../ui-mode';
 
 // Touch-first controls shared by both mobile prototypes: fat sliders,
 // chip pickers, and a prototype switcher. An adapter over the session —
@@ -81,14 +82,10 @@ export class MobileControls {
         <button class="btn" id="mc-reset">↻ randomize weights</button>
       </section>
       <section>
-        <span class="mc-label">prototype</span>
-        <div class="mc-proto">
-          <button class="chip ${opts.proto === 'deck' ? 'on' : ''}" data-proto="deck">A · deck</button>
-          <button class="chip ${opts.proto === 'board' ? 'on' : ''}" data-proto="board">B · board</button>
-        </div>
+        <p class="mc-help">${HELP[opts.proto]}</p>
       </section>
       <section>
-        <p class="mc-help">${HELP[opts.proto]}</p>
+        <button class="switch-link" id="mc-view">↗ switch to desktop version</button>
       </section>
     `;
 
@@ -130,14 +127,9 @@ export class MobileControls {
       session.randomize();
     });
 
-    // prototype switch — same page, different search param
-    root.querySelectorAll<HTMLButtonElement>('[data-proto]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        if (btn.dataset.proto !== opts.proto) {
-          window.location.search = `?proto=${btn.dataset.proto}`;
-        }
-      });
-    });
+    // escape hatch when auto-detection guessed wrong: persist the override
+    // and reload into the desktop interface.
+    root.querySelector('#mc-view')!.addEventListener('click', () => setMode('desktop'));
 
     // layer blocks: delegated slider + add/remove events. A slider gesture
     // marks history at first touch; mark() dedupes, so this is free.
