@@ -48,6 +48,9 @@ body {
   position: relative;
   pointer-events: auto;
   touch-action: none;
+  /* A drag that starts on an arrow must not sweep a text selection over the labels. */
+  -webkit-user-select: none;
+  user-select: none;
   min-width: 0;
 }
 
