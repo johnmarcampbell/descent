@@ -74,8 +74,9 @@ can reuse the game, the 3D presentation, and the interaction math with its
 own adapters:
 
 - `src/network.ts` — model, forward pass, metrics. Pure, no three.js.
-- `src/datasets.ts` — generators (linked rings, nested spheres, twin helix,
-  xor cube). All non-linearly-separable so hidden layers matter.
+- `src/datasets.ts` — a registry of generators: the free-play sets (linked
+  rings, nested spheres, twin helix, xor cube), all non-linearly-separable so
+  hidden layers matter, plus seeded, reproducible sets for tutorial levels.
 - `src/session.ts` — the game session: owns net/data/result, every game
   mutation, and coarse change notifications. Pure; runs headless.
 - `src/layerwindow.ts` — layer navigation as a pure state machine: a window
@@ -89,6 +90,12 @@ own adapters:
 - `src/theme.ts` — shared palette.
 - `src/ui.ts` — right-hand control panel (bias sliders, add/remove unit,
   dataset picker, accuracy).
+- `src/tutorial/` — the guided levels: `levels.ts` (five levels as data —
+  a starting Snapshot, hidden controls, a goal, and guiding steps),
+  `tutorial.ts` (a headless runner over the Session), and `coach.ts` (the
+  one DOM adapter for every shell: the coach strip, the spotlight ring, and
+  hiding controls through `data-hide` on the shell root). `?level=N` boots
+  straight into level N.
 - `src/desktop/` — desktop-only adapters: pointer-event drag wiring and the
   nav-button/keyboard layout driver.
 - `src/main.ts` — desktop composition root: construct, wire, start.

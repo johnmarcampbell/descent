@@ -223,15 +223,40 @@ html, body {
 .deck-prev { position: fixed; left: 10px; top: 44%; z-index: 10; }
 .deck-next { position: fixed; right: 10px; top: 44%; z-index: 10; }
 
-/* quick controls for the selected vector */
-.deck-qc {
+/* the column under the header: the tutorial coach (while a level runs), then the
+   quick controls. Sits clear of the title/score band above it. */
+.deck-under {
   position: fixed;
   left: 12px;
   right: 12px;
-  /* one action strip below the header: undo/redo, the selected-vector bias
-     slider, and +. Sits clear of the title/score band above it. */
   top: calc(var(--sat) + 118px);
   z-index: 11;
+  pointer-events: none;
+}
+#m-app[data-tutorial] .deck-under { top: calc(var(--sat) + 92px); }
+
+/* the tutorial coach (drawn by src/tutorial/coach.css) as a compact pill: accuracy is in
+   the shell's own score, so the bar becomes the pill's bottom edge, and the pips collapse
+   into the kicker's 02/05. */
+#m-app .coach { padding: 0 4px 10px 14px; border-radius: 16px; }
+#m-app .coach-top { height: 34px; gap: 8px; }
+#m-app .coach-pips,
+#m-app .coach-acc { display: none; }
+#m-app .coach-acts { margin-right: 0; }
+#m-app .coach-acts button { min-width: 34px; height: 34px; padding: 0 8px; }
+#m-app .coach-line { margin-top: 0; gap: 10px; padding-right: 10px; }
+#m-app .coach-say { font-size: 12.5px; line-height: 1.4; }
+#m-app .coach-hint p { font-size: 11px; }
+#m-app .coach.hinting .coach-hint { margin-top: 5px; margin-right: 10px; }
+#m-app .coach-meter { position: absolute; left: 14px; right: 14px; bottom: 4px; }
+#m-app .coach-bar { height: 2px; }
+#m-app .coach-bar s { top: -3px; bottom: -3px; }
+#m-app .coach.won .coach-say { font-size: 11.5px; }
+#m-app .coach-next { padding: 10px 14px; }
+.deck-coach .coach { position: relative; margin-bottom: 8px; }
+
+/* quick controls for the selected vector: undo/redo, its bias slider, and + */
+.deck-qc {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -463,6 +488,8 @@ html, body {
   pointer-events: none;
 }
 .board .cell[hidden] { display: none; }
+/* the tutorial coach floats over the top pane, under its label */
+.board-panes > .coach { top: 26px; left: 8px; right: 8px; z-index: 4; }
 .board .cell + .cell { border-top: 1px solid var(--line); }
 
 .board-flow {

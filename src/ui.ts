@@ -1,6 +1,10 @@
-import type { Net, Unit } from './network';
-import { MAX_UNITS, outSpaceIndex } from './network';
+import type { Unit } from './network';
+import { outSpaceIndex } from './network';
+import type { Session } from './session';
 import { UNIT_COLORS, OUT_COLOR } from './theme';
+
+/** The structure rules the panel renders against: what exists, and what may change. */
+type Limits = Pick<Session, 'net' | 'canAdd' | 'canRemove'>;
 
 export interface UICallbacks {
   /** layer 0 | 1 = hidden layers, 2 = output unit (idx ignored). */
@@ -19,6 +23,7 @@ export class Panel {
   private readonly lossEl: HTMLElement;
   private readonly solvedEl: HTMLElement;
   private readonly layersEl: HTMLElement;
+  private readonly dataEl: HTMLSelectElement;
   private undoBtn!: HTMLButtonElement;
   private redoBtn!: HTMLButtonElement;
 
@@ -48,13 +53,13 @@ export class Panel {
         </div>
         <div class="solved" id="p-solved" hidden>◈ solved</div>
       </section>
-      <section class="block">
+      <section class="block" data-ctl="dataset">
         <label class="block-label" for="p-data">dataset</label>
         <div class="select-wrap">
           <select id="p-data">${options}</select>
         </div>
       </section>
-      <section class="block">
+      <section class="block" data-ctl="planes">
         <label class="block-label">display</label>
         <div class="toggles">
           <label class="toggle"><input type="checkbox" id="p-plane-unit" /> unit planes</label>
@@ -67,7 +72,7 @@ export class Panel {
           <button class="btn" id="p-undo" disabled>↩ undo</button>
           <button class="btn" id="p-redo" disabled>↪ redo</button>
         </div>
-        <button class="btn" id="p-reset">↻ randomize weights</button>
+        <button class="btn" id="p-reset" data-ctl="reset">↻ randomize weights</button>
         <p class="help">
           drag an arrow tip to aim &amp; scale a weight · drag empty space to
           orbit · scroll to zoom · <b>‹ ›</b> move between layers · the
@@ -81,9 +86,8 @@ export class Panel {
     this.solvedEl = root.querySelector('#p-solved')!;
     this.layersEl = root.querySelector('#p-layers')!;
 
-    root.querySelector<HTMLSelectElement>('#p-data')!.addEventListener('change', (e) => {
-      this.cb.onDataset((e.target as HTMLSelectElement).value);
-    });
+    this.dataEl = root.querySelector<HTMLSelectElement>('#p-data')!;
+    this.dataEl.addEventListener('change', () => this.cb.onDataset(this.dataEl.value));
     root.querySelector('#p-reset')!.addEventListener('click', () => this.cb.onReset());
     this.undoBtn = root.querySelector<HTMLButtonElement>('#p-undo')!;
     this.redoBtn = root.querySelector<HTMLButtonElement>('#p-redo')!;
@@ -114,12 +118,19 @@ export class Panel {
     });
   }
 
-  renderStructure(net: Net): void {
+  /** Follow a dataset change that didn't come from the picker (undo, restore). */
+  showDataset(name: string): void {
+    this.dataEl.value = name;
+  }
+
+  /** Rebuild the layer blocks; `limits` says where units may be added or removed. */
+  renderStructure(limits: Limits): void {
+    const net = limits.net;
     const os = outSpaceIndex(net);
     this.layersEl.innerHTML = [
-      this.layerBlock('hidden 1', 'reads input space', net.hidden[0], 0, 1),
-      this.layerBlock('hidden 2', 'reads hidden 1', net.hidden[1], 1, 0),
-      `<section class="block layer">
+      this.layerBlock('hidden 1', 'reads input space', net.hidden[0], 0, limits),
+      this.layerBlock('hidden 2', 'reads hidden 1', net.hidden[1], 1, limits),
+      `<section class="block layer" data-ctl="out">
         <div class="layer-head">
           <span class="block-label">output</span>
           <span class="reads">reads hidden ${os} · sigmoid</span>
@@ -129,16 +140,19 @@ export class Panel {
     ].join('');
   }
 
-  private layerBlock(title: string, note: string, units: Unit[], layer: number, min: number): string {
+  private layerBlock(
+    title: string, note: string, units: Unit[], layer: 0 | 1, limits: Limits,
+  ): string {
+    const removable = limits.canRemove(layer);
     const rows = units
-      .map((u, i) => this.unitRow(u, layer, i, UNIT_COLORS[i], `u${i + 1}`, units.length > min))
+      .map((u, i) => this.unitRow(u, layer, i, UNIT_COLORS[i], `u${i + 1}`, removable))
       .join('');
-    const addBtn =
-      units.length < MAX_UNITS
-        ? `<button class="btn add" data-layer="${layer}">+ add unit</button>`
-        : '';
+    const addBtn = limits.canAdd(layer)
+      ? `<button class="btn add" data-ctl="add" data-layer="${layer}">+ add unit</button>`
+      : '';
     const empty = units.length === 0 ? `<p class="empty-note">no units — output reads hidden 1</p>` : '';
-    return `<section class="block layer">
+    const ctl = layer === 1 ? ' data-ctl="h2"' : '';
+    return `<section class="block layer"${ctl}>
       <div class="layer-head">
         <span class="block-label">${title}</span>
         <span class="reads">${note}</span>
@@ -155,7 +169,7 @@ export class Panel {
     return `<div class="unit-row" style="--c:${color}">
       <i class="swatch"></i>
       <span class="uname">${name}</span>
-      <input type="range" min="-3" max="3" step="0.01" value="${u.b}"
+      <input type="range" min="-3" max="3" step="0.01" value="${u.b}" data-ctl="bias"
         data-layer="${layer}" data-idx="${idx}" aria-label="bias of ${name}" />
       <output>${u.b.toFixed(2)}</output>
       ${x}

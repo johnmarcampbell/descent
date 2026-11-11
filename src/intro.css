@@ -91,21 +91,72 @@
 }
 .intro-goal b { color: var(--accent); font-weight: 500; }
 
+/* free play: the quiet way out, under the gold learn-to-play button */
 .intro-start {
   display: block;
   width: 100%;
   padding: 13px;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--line-bright, var(--line-2));
   border-radius: 12px;
-  background: rgba(251, 191, 36, 0.08);
-  color: var(--accent);
+  background: none;
+  color: var(--dim);
   font-family: var(--mono);
   font-size: 12px;
   letter-spacing: 0.12em;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: border-color 0.15s, color 0.15s;
 }
-.intro-start:hover { background: rgba(251, 191, 36, 0.16); }
+.intro-start:hover { border-color: var(--dim); color: var(--text); }
+
+/* ---- the tutorial fork: learn to play (or pick a level), or free play ---- */
+
+.intro-learn {
+  display: block;
+  width: 100%;
+  margin-top: 18px;
+  padding: 14px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(105deg, #fcd34d, var(--accent) 55%, #f59e0b);
+  box-shadow: 0 8px 26px rgba(251, 191, 36, 0.18);
+  color: #1d1505;
+  font: 700 12px var(--mono);
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition: filter 0.15s, box-shadow 0.15s;
+}
+.intro-learn:hover { filter: brightness(1.07); box-shadow: 0 10px 32px rgba(251, 191, 36, 0.28); }
+
+.intro-levels {
+  display: flex;
+  gap: 4px;
+  margin: 8px 0 14px;
+  overflow-x: auto; /* a narrow card scrolls the row rather than wrapping a title */
+  scrollbar-width: none;
+}
+.intro-level {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 8px 6px 7px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.015);
+  color: var(--dim);
+  font: 500 8.5px/1.25 var(--mono);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.intro-level b { color: var(--text); font-size: 12px; font-weight: 500; letter-spacing: 0.04em; }
+.intro-level:hover { color: var(--text); border-color: var(--line-bright, var(--line-2)); }
+.intro-level.done { border-color: rgba(251, 191, 36, 0.35); }
+.intro-level.done b { color: var(--accent); }
+.intro-level.done b::after { content: ' ✓'; font-size: 10px; }
 
 /* ---- the reopen trigger ---- */
 

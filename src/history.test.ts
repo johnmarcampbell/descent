@@ -78,6 +78,34 @@ describe('History', () => {
     expect(changes).toContain('dataset');
   });
 
+  it('undo restores unit caps', () => {
+    const s = new Session();
+    const h = new History(s);
+    h.mark();
+    s.restore({ ...s.snapshot(), caps: [1, 0] });
+    expect(s.canAdd(0)).toBe(false);
+    h.undo();
+    expect(s.canAdd(0)).toBe(true);
+  });
+
+  it('reset clears both stacks and notifies', () => {
+    const s = new Session();
+    const h = new History(s);
+    h.mark();
+    s.setBias(0, 0, 1);
+    h.mark();
+    s.setBias(0, 0, 2);
+    h.undo();
+    expect(h.canUndo && h.canRedo).toBe(true);
+    let notified = 0;
+    h.subscribe(() => notified++);
+
+    h.reset();
+    expect(h.canUndo).toBe(false);
+    expect(h.canRedo).toBe(false);
+    expect(notified).toBe(1);
+  });
+
   it('caps the stack at the limit', () => {
     const s = new Session();
     const h = new History(s, 5);

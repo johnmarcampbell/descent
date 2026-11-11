@@ -239,6 +239,7 @@ body {
 .brand { padding-bottom: 18px; border-bottom: 1px solid var(--line); }
 
 .score {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 20px;
@@ -254,22 +255,27 @@ body {
   text-transform: uppercase;
   color: var(--dim);
   margin-bottom: 4px;
+  white-space: nowrap;
 }
 
 .metric output { font-family: var(--mono); }
 .metric.main output { font-size: 34px; font-weight: 500; line-height: 1; }
 .metric:not(.main) output { font-size: 14px; color: var(--dim); }
 
+/* pinned top-right, so a 100.0% score and the loss keep their row to themselves */
 .solved {
-  margin-left: auto;
+  position: absolute;
+  top: -3px;
+  right: 0;
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #34d399;
   border: 1px solid #34d39955;
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: 4px 8px;
+  white-space: nowrap;
   animation: pulse 1.6s ease-in-out infinite;
 }
 
@@ -476,6 +482,17 @@ input[type='range']::-moz-range-thumb {
 }
 
 .help b { color: var(--accent); font-weight: 500; }
+
+/* ---------- tutorial coach (drawn by src/tutorial/coach.css) ---------- */
+
+#views > .coach {
+  left: 50%;
+  bottom: 96px; /* clear of the nav pills at bottom 44px */
+  transform: translateX(-50%);
+  width: min(580px, calc(100% - 48px));
+}
+/* focus mode docks a minimap bottom-right: keep to its left */
+#views.focus > .coach { left: 24px; transform: none; }
 
 /* ---------- small screens ---------- */
 

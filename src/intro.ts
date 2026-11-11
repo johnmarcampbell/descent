@@ -1,9 +1,11 @@
 import './intro.css';
+import type { Tutorial } from './tutorial/tutorial';
 
 // How-to-play splash: a single-screen manifesto shown on first visit and
 // reopenable from a ? trigger. Self-contained — it owns the overlay, the
 // first-visit flag, and the trigger button; the composition root just places
-// the button in its own chrome. The gesture legend is mode-aware.
+// the button in its own chrome. The gesture legend is mode-aware. The card
+// forks into the tutorial: learn to play (or pick a level), or free play.
 
 type Mode = 'desktop' | 'mobile';
 const SEEN = 'descent.introSeen';
@@ -26,7 +28,10 @@ export interface Intro {
   button: HTMLButtonElement;
 }
 
-export function createIntro(mode: Mode): Intro {
+/** What the splash needs from the tutorial: the levels, progress, and a way in or out. */
+export type IntroTutorial = Pick<Tutorial, 'levels' | 'index' | 'completed' | 'start' | 'exit'>;
+
+export function createIntro(mode: Mode, tutorial: IntroTutorial): Intro {
   const g = GESTURES[mode];
 
   const overlay = document.createElement('div');
@@ -45,13 +50,13 @@ export function createIntro(mode: Mode): Intro {
         of the data. Push the <b>accuracy</b> as high as you can. Think like a machine.
       </p>
       <div class="intro-legend">
-        <div class="k">+ add unit</div><div class="v">place a new neuron in a layer</div>
         <div class="k">vector arrow</div><div class="v">drag to aim &amp; scale a weight</div>
-        <div class="k">bias slider</div><div class="v">slide the decision plane</div>
         <div class="k">orbit / zoom</div><div class="v">${g.orbit}</div>
         <div class="k">layers</div><div class="v">${g.layers}</div>
       </div>
-      <button class="intro-start">start</button>
+      <button class="intro-learn">learn to play · ${tutorial.levels.length} levels</button>
+      <div class="intro-levels"></div>
+      <button class="intro-start">free play</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -64,15 +69,31 @@ export function createIntro(mode: Mode): Intro {
       /* private mode — shows again next visit, harmless */
     }
   };
+  const learn = overlay.querySelector<HTMLElement>('.intro-learn')!;
+  const levelsEl = overlay.querySelector('.intro-levels')!;
+  // Progress can change between opens, so the chips and the learn button's level are fresh.
   const open = (): void => {
+    const first = tutorial.levels.findIndex((_, i) => !tutorial.completed(i));
+    learn.dataset.level = String(Math.max(first, 0)); // everything cleared: start over
+    levelsEl.innerHTML = tutorial.levels
+      .map((l, i) => `<button class="intro-level${tutorial.completed(i) ? ' done' : ''}"
+        data-level="${i}"><b>${String(i + 1).padStart(2, '0')}</b>${l.title}</button>`)
+      .join('');
     overlay.hidden = false;
   };
 
-  // Backdrop, ×, and the start button close; clicks inside the card's text
+  // Backdrop, ×, and the start buttons close; clicks inside the card's text
   // don't, so a reader can select without dismissing.
   overlay.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
-    if (t === overlay || t.closest('.intro-close, .intro-start')) close();
+    const level = t.closest<HTMLElement>('[data-level]')?.dataset.level;
+    if (level) {
+      tutorial.start(Number(level));
+      close();
+    } else if (t.closest('.intro-start')) {
+      tutorial.exit();
+      close();
+    } else if (t === overlay || t.closest('.intro-close')) close();
   });
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !overlay.hidden) close();
@@ -91,7 +112,7 @@ export function createIntro(mode: Mode): Intro {
   } catch {
     /* private mode — treat as first visit */
   }
-  if (!seen) open();
+  if (!seen && tutorial.index === null) open(); // a level booted from ?level=N skips the splash
 
   return { open, button };
 }

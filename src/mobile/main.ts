@@ -6,6 +6,7 @@ import { bootDeck } from './deck';
 import { bootBoard } from './board';
 import { wireTouchDrag } from './touch';
 import { createIntro } from '../intro';
+import { bootTutorial } from '../tutorial/coach';
 import type { ProtoName } from './controls';
 
 // Mobile composition root. The Deck is the shipping mobile interface; the
@@ -33,8 +34,11 @@ function boot(proto: ProtoName): void {
     onRelease: (entry) => ui.onRelease?.(entry),
   });
 
-  // How-to-play splash (first visit + a ? in the top-right cluster).
-  const intro = createIntro('mobile');
+  const tutorial = bootTutorial(session, history, { root: app, stage, ...ui.coach });
+
+  // How-to-play splash (first visit + a ? in the top-right cluster), built after the
+  // tutorial so a level booted from ?level=N skips it.
+  const intro = createIntro('mobile', tutorial);
   const right = app.querySelector('.deck-right');
   if (right) right.insertBefore(intro.button, right.firstChild);
   else app.appendChild(intro.button);
@@ -48,6 +52,7 @@ function boot(proto: ProtoName): void {
       stage,
       dragger,
       history,
+      tutorial,
       net: session.net,
       vp: stage.vp,
       getEntries: () => stage.entries,

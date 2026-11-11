@@ -1,0 +1,248 @@
+/* Tutorial chrome shared by every shell: hidden controls, the coach strip, the spotlight.
+   Each shell places the strip in its own stylesheet (src/style.css, src/mobile/mobile.css).
+   --line-bright is desktop's and --line-2 the mobile shell's, hence the fallbacks. */
+
+/* ---------- hidden controls: free play's always, plus each level's data-hide list ---------- */
+
+[data-tutorial] :is([data-ctl='dataset'], [data-ctl='planes'], [data-ctl='reset']),
+[data-hide~='bias'] [data-ctl='bias'],
+[data-hide~='bias'] [data-ctl='bias'] + output,
+[data-hide~='add'] [data-ctl='add'],
+[data-hide~='h2'] [data-ctl='h2'],
+[data-hide~='out'] [data-ctl='out'] { display: none !important; }
+
+/* With gold's controls hidden, its arrow is out of reach too: the view it lives in goes inert
+   (no drag, no orbit), keeping only its buttons. */
+[data-hide~='out'] :is(.view, .cell)[data-view='1'] { pointer-events: none; }
+[data-hide~='out'] :is(.view, .cell)[data-view='1'] > button { pointer-events: auto; }
+
+/* ---------- coach strip ---------- */
+
+.coach {
+  --ink: #1d1505; /* text on gold */
+  position: absolute;
+  z-index: 8;
+  isolation: isolate;
+  overflow: hidden;
+  pointer-events: auto;
+  padding: 12px 16px 14px 18px;
+  font-family: var(--mono);
+  color: var(--text);
+  border: 1px solid var(--line-bright, var(--line-2));
+  border-top-color: rgba(251, 191, 36, 0.55);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(14, 20, 32, 0.94), rgba(9, 12, 20, 0.95));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 -1px 24px rgba(251, 191, 36, 0.07);
+}
+.coach[hidden] { display: none; }
+
+/* the win's gold flood, swept in from the left */
+.coach::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, #fcd34d, var(--accent) 50%, #f59e0b);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.coach-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 20px;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+}
+.coach-kicker { color: var(--accent); font-weight: 500; white-space: nowrap; }
+
+.coach-pips { display: flex; align-items: center; gap: 5px; }
+.coach-pips i {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  border: 1px solid var(--faint);
+  transition: width 0.3s, background 0.3s, border-color 0.3s;
+}
+.coach-pips i.done { background: var(--accent); border-color: var(--accent); }
+.coach-pips i.now {
+  width: 16px;
+  border-color: var(--accent);
+  animation: coach-pip 1.6s ease-in-out infinite;
+}
+@keyframes coach-pip {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2); }
+  50% { box-shadow: 0 0 0 5px rgba(251, 191, 36, 0.03); }
+}
+
+.coach-acts { display: flex; gap: 2px; margin: 0 -8px 0 auto; }
+.coach-acts button {
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--dim);
+  font: inherit;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  padding: 3px 7px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.coach-acts button:hover { color: var(--text); background: rgba(255, 255, 255, 0.04); }
+.coach-acts .coach-exit { font-size: 14px; letter-spacing: 0; line-height: 1; padding: 2px 7px; }
+
+.coach-line { display: flex; align-items: center; gap: 16px; margin-top: 9px; }
+.coach-say {
+  flex: 1;
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  text-wrap: pretty;
+}
+
+/* the hint unfolds under the instruction */
+.coach-hint {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.35s ease, opacity 0.35s ease, margin-top 0.35s ease;
+}
+.coach-hint p {
+  overflow: hidden;
+  margin: 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--dim);
+  transform: translateY(-4px);
+  transition: transform 0.35s ease;
+}
+.coach.hinting .coach-hint { grid-template-rows: 1fr; opacity: 1; margin-top: 7px; }
+.coach.hinting .coach-hint p { transform: none; }
+
+.coach-meter { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.coach-bar {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  border-radius: 9px;
+  background: var(--line);
+}
+.coach-bar b {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.75));
+  transition: width 0.12s ease-out, box-shadow 0.3s;
+}
+.coach.met .coach-bar b {
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.55);
+}
+.coach-bar s {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+.coach-acc {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.coach-acc b { color: var(--text); font-weight: 500; }
+
+.coach-next {
+  display: none;
+  flex: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 9px 16px;
+  background: var(--ink);
+  color: var(--accent);
+  font: 500 10.5px var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.coach-next:hover { background: #000; }
+.coach-next:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ---- the win: the strip floods gold (transitions live here, so the next level
+   arrives on a dark strip at once) ---- */
+
+.coach.won {
+  color: var(--ink);
+  border-color: var(--accent);
+  transition: color 0.3s, border-color 0.3s;
+  animation: coach-won 0.9s ease-out;
+}
+.coach.won::before {
+  transform: none;
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.coach.won .coach-kicker { color: var(--ink); font-weight: 700; }
+.coach.won .coach-pips i { border-color: rgba(29, 21, 5, 0.45); }
+.coach.won .coach-pips i.done { background: var(--ink); border-color: var(--ink); }
+.coach.won .coach-pips i.now { animation: none; box-shadow: none; }
+.coach.won .coach-acts button { color: rgba(29, 21, 5, 0.6); }
+.coach.won .coach-acts button:hover { color: var(--ink); background: rgba(29, 21, 5, 0.08); }
+.coach.won .coach-skip,
+.coach.won .coach-hint,
+.coach.won .coach-meter { display: none; }
+.coach.won .coach-next { display: block; }
+.coach.won .coach-say { font-size: 13px; line-height: 1.5; text-wrap: balance; }
+/* the win's text lands once the flood has passed under it */
+.coach.won .coach-top,
+.coach.won .coach-line { animation: coach-land 0.35s 0.18s ease-out both; }
+@keyframes coach-land {
+  from { opacity: 0; transform: translateY(3px); }
+}
+
+@keyframes coach-won {
+  from { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.55), 0 18px 50px rgba(0, 0, 0, 0.55); }
+  to { box-shadow: 0 0 0 18px rgba(251, 191, 36, 0), 0 18px 50px rgba(0, 0, 0, 0.55); }
+}
+
+/* ---------- spotlight: two rings that grow out from the target and fade ---------- */
+
+.spot {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+.spot i {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 1.5px solid var(--accent);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.3), inset 0 0 8px rgba(251, 191, 36, 0.2);
+  animation: spot 1.8s ease-out infinite;
+}
+.spot i + i { animation-delay: 0.9s; }
+@keyframes spot {
+  from { inset: 3px; opacity: 0.95; }
+  to { inset: -17px; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coach.won, .coach.won::before, .coach-hint, .coach-hint p, .coach-pips i, .coach-bar b {
+    transition: none;
+  }
+  .coach-pips i.now, .coach.won, .coach.won .coach-top, .coach.won .coach-line { animation: none; }
+  .spot i { animation: none; inset: -4px; opacity: 0.85; }
+  .spot i + i { display: none; }
+}

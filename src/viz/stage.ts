@@ -24,6 +24,19 @@ export interface StageEntry {
   isOut: boolean;
 }
 
+type Rect = { left: number; top: number; width: number; height: number };
+
+/** Where a world point lands in client coordinates, seen through camera into rect. */
+export function clientOf(
+  world: THREE.Vector3, camera: THREE.Camera, rect: Rect,
+): { x: number; y: number } {
+  const v = world.clone().project(camera);
+  return {
+    x: rect.left + ((v.x + 1) / 2) * rect.width,
+    y: rect.top + ((1 - v.y) / 2) * rect.height,
+  };
+}
+
 export class Stage {
   readonly vp: Viewports;
   readonly cells: HTMLElement[];
@@ -78,6 +91,22 @@ export class Stage {
 
   setViewInteraction(view: number, on: boolean): void {
     this.vp.views[view].controls.enabled = on;
+  }
+
+  /**
+   * Client coordinates of a unit's arrow tip, with the cell it is drawn in; null if the
+   * unit doesn't exist. The point may fall outside the cell (hidden, or off its edge).
+   */
+  tipClient(layer: LayerIndex, idx: number): { x: number; y: number; cell: HTMLElement } | null {
+    const entry = this.entriesList.find((e) => e.layer === layer && e.idx === idx);
+    if (!entry) return null;
+    const tip = entry.gizmo.hit.getWorldPosition(new THREE.Vector3());
+    const cell = this.cells[entry.view];
+    return { ...clientOf(tip, this.camera(entry.view), cell.getBoundingClientRect()), cell };
+  }
+
+  planeEnabled(kind: 'unit' | 'out'): boolean {
+    return this.showPlanes[kind];
   }
 
   /** Master plane visibility for hidden units ('unit') or the output ('out'). */
