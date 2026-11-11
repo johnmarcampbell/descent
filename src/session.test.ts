@@ -97,10 +97,41 @@ describe('Session', () => {
     expect(s.net.out.w[2]).toBe(0);
   });
 
+  it('hidden 1 keeps its last unit; hidden 2 may empty out', () => {
+    const s = new Session();
+    expect(s.canRemove(0)).toBe(false);
+    s.removeUnit(0, 0);
+    expect(s.net.hidden[0]).toHaveLength(1);
+    expect(s.canRemove(1)).toBe(false);
+    s.addUnit(1);
+    expect(s.canRemove(1)).toBe(true);
+    s.removeUnit(1, 0);
+    expect(s.net.hidden[1]).toHaveLength(0);
+  });
+
   it('addUnit refuses beyond MAX_UNITS', () => {
     const s = new Session();
     for (let i = 0; i < 5; i++) s.addUnit(0);
     expect(s.net.hidden[0]).toHaveLength(MAX_UNITS);
+  });
+
+  it('caps limit adds and round-trip through snapshot/restore', () => {
+    const s = new Session();
+    const start = s.snapshot();
+    expect(start.caps).toEqual([MAX_UNITS, MAX_UNITS]);
+
+    s.restore({ ...start, caps: [2, 0] });
+    expect(s.canAdd(1)).toBe(false);
+    s.addUnit(1);
+    expect(s.net.hidden[1]).toHaveLength(0);
+    s.addUnit(0);
+    s.addUnit(0);
+    expect(s.net.hidden[0]).toHaveLength(2);
+    expect(s.canAdd(0)).toBe(false);
+    expect(s.snapshot().caps).toEqual([2, 0]);
+
+    s.restore(start);
+    expect(s.canAdd(1)).toBe(true);
   });
 
   it('setWeight zeroes dims the space lacks and clamps the norm', () => {

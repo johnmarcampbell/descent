@@ -2,7 +2,6 @@ import type { Session, LayerIndex } from '../session';
 import { Stage } from '../viz/stage';
 import type { StageEntry } from '../viz/stage';
 import type { History } from '../history';
-import { MAX_UNITS } from '../network';
 import { UNIT_COLORS, OUT_COLOR } from '../theme';
 import { MobileControls } from './controls';
 import type { ProtoUI } from './controls';
@@ -39,17 +38,22 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
       </div>
     </header>
 
-    <div class="deck-qc" id="deck-qc">
-      <button class="pill deck-ubtn" id="deck-undo" disabled>↩</button>
-      <button class="pill deck-ubtn" id="deck-redo" disabled>↪</button>
-      <div class="qc-sel pill" id="qc-sel" hidden>
-        <i class="swatch"></i>
-        <span class="qc-name" id="qc-name">—</span>
-        <input type="range" min="-3" max="3" step="0.01" id="qc-bias" aria-label="bias of selected vector" />
-        <output id="qc-val">0.00</output>
-        <button class="qc-x" id="qc-x">×</button>
+    <div class="deck-under">
+      <div class="deck-coach" id="deck-coach"></div>
+      <div class="deck-qc" id="deck-qc">
+        <button class="pill deck-ubtn" id="deck-undo" disabled>↩</button>
+        <button class="pill deck-ubtn" id="deck-redo" disabled>↪</button>
+        <div class="qc-sel pill" id="qc-sel" hidden>
+          <i class="swatch"></i>
+          <span class="qc-name" id="qc-name">—</span>
+          <input type="range" min="-3" max="3" step="0.01" id="qc-bias" data-ctl="bias"
+            aria-label="bias of selected vector" />
+          <output id="qc-val">0.00</output>
+          <button class="qc-x" id="qc-x">×</button>
+        </div>
+        <button class="qc-add pill" id="qc-add" data-ctl="add"
+          title="add a vector to this space">+</button>
       </div>
-      <button class="qc-add pill" id="qc-add" title="add a vector to this space">+</button>
     </div>
 
     <button class="chev-btn deck-prev" id="deck-prev" hidden>‹</button>
@@ -201,6 +205,8 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
   });
 
   window.addEventListener('resize', placeMini);
+  // The column above it grows when the tutorial coach (or its hint) appears.
+  new ResizeObserver(placeMini).observe(app.querySelector('.deck-under')!);
 
   // pull-up sheet — tap outside closes it (and swallows the tap so it
   // can't orbit or grab a vector behind the sheet)
@@ -288,18 +294,28 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
       qcSel.hidden = false;
       qcSel.style.setProperty('--c', qcColor(sel.layer, sel.idx));
       $('qc-name').textContent = sel.layer === 2 ? 'out' : `h${sel.layer + 1}·u${sel.idx + 1}`;
+      qcBias.dataset.layer = String(sel.layer);
+      qcBias.dataset.idx = String(sel.idx);
       qcBias.value = String(unit.b);
       qcVal.textContent = unit.b.toFixed(2);
-      qcX.hidden = sel.layer === 2; // the output unit can't be deleted
+      qcX.hidden = sel.layer === 2 || !session.canRemove(sel.layer); // out and last units stay
     } else {
       qcSel.hidden = true;
     }
     const target = addTarget();
-    qcAdd.disabled = target === null || session.net.hidden[target].length >= MAX_UNITS;
+    qcAdd.disabled = target === null || !session.canAdd(target);
+    if (target === null) delete qcAdd.dataset.layer;
+    else qcAdd.dataset.layer = String(target);
   }
 
   function select(layer: LayerIndex, idx: number): void {
     sel = { layer, idx };
+    applyHighlight();
+    renderQC();
+  }
+
+  function deselect(): void {
+    sel = null;
     applyHighlight();
     renderQC();
   }
@@ -313,7 +329,7 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
   });
 
   qcX.addEventListener('click', () => {
-    if (!sel || sel.layer === 2) return;
+    if (!sel || sel.layer === 2 || !session.canRemove(sel.layer)) return;
     history.mark();
     const dead = sel;
     sel = null;
@@ -322,7 +338,7 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
 
   qcAdd.addEventListener('click', () => {
     const layer = addTarget();
-    if (layer === null || session.net.hidden[layer].length >= MAX_UNITS) return;
+    if (layer === null || !session.canAdd(layer)) return;
     history.mark();
     session.addUnit(layer);
     const idx = session.net.hidden[layer].length - 1;
@@ -332,11 +348,10 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
   });
 
   session.subscribe((change) => {
-    if (change === 'structure') {
-      // The selected address may have died with the structure change.
-      if (sel && sel.layer !== 2 && sel.idx >= session.net.hidden[sel.layer].length) sel = null;
-      applyHighlight(); // gizmos were rebuilt
-    }
+    // The selected address may have died with the structure. Checked on every change: a
+    // restore that switches dataset reports 'dataset' before 'structure'.
+    if (sel && sel.layer !== 2 && sel.idx >= session.net.hidden[sel.layer].length) sel = null;
+    if (change === 'structure') applyHighlight(); // gizmos were rebuilt
     renderQC(); // bias may have changed under us (undo, sheet slider)
   });
 
@@ -348,5 +363,15 @@ export function bootDeck(app: HTMLElement, canvas: HTMLCanvasElement, session: S
     onGrab: (entry: StageEntry) => select(entry.layer, entry.idx),
     // The drag controller un-highlights on release; selection persists.
     onRelease: () => applyHighlight(),
+    coach: {
+      slot: $('deck-coach'),
+      // Page to the space the layer's arrows live in; select the unit, or clear the selection
+      // so + targets that space.
+      reveal: (layer, idx) => {
+        setS(session.spaceOf(layer));
+        if (idx === undefined) deselect();
+        else select(layer, idx);
+      },
+    },
   };
 }

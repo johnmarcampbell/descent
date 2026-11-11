@@ -1,8 +1,9 @@
 import type { Session } from '../session';
 import type { LayerIndex } from '../session';
 import type { Stage, StageEntry } from '../viz/stage';
+import type { TutorialHost } from '../tutorial/coach';
 import type { Unit } from '../network';
-import { MAX_UNITS, outSpaceIndex } from '../network';
+import { outSpaceIndex } from '../network';
 import { DATASET_NAMES } from '../datasets';
 import { UNIT_COLORS, OUT_COLOR } from '../theme';
 
@@ -19,6 +20,8 @@ export interface ProtoUI {
   onGrab?: (entry: StageEntry) => void;
   /** A grab was released by the drag controller. */
   onRelease?: (entry: StageEntry) => void;
+  /** The prototype's side of the tutorial host. */
+  coach: Pick<TutorialHost, 'slot' | 'reveal'>;
 }
 
 export interface MobileControlsOpts {
@@ -62,7 +65,7 @@ export class MobileControls {
           <span class="solved" id="mc-solved" hidden>◈ SOLVED</span>
         </div>
       </section>` : ''}
-      <section>
+      <section data-ctl="dataset">
         <span class="mc-label">dataset</span>
         <div class="mc-chips" id="mc-datasets">${chips}</div>
       </section>
@@ -70,14 +73,14 @@ export class MobileControls {
         <span class="mc-label">network</span>
         <div id="mc-layers"></div>
       </section>
-      <section>
+      <section data-ctl="planes">
         <span class="mc-label">display</span>
         <div class="mc-toggles">
           <button class="toggle-chip" data-plane="unit">unit planes</button>
           <button class="toggle-chip on" data-plane="out">decision plane</button>
         </div>
       </section>
-      <section>
+      <section data-ctl="reset">
         <button class="btn" id="mc-reset">↻ randomize weights</button>
       </section>
       <section>
@@ -165,26 +168,28 @@ export class MobileControls {
     const net = this.session.net;
     const os = outSpaceIndex(net);
     this.layersEl.innerHTML = [
-      this.layerBlock('hidden 1', 'reads input', net.hidden[0], 0, 1),
-      this.layerBlock('hidden 2', 'reads hidden 1', net.hidden[1], 1, 0),
-      `<div class="mc-layer">
+      this.layerBlock('hidden 1', 'reads input', net.hidden[0], 0),
+      this.layerBlock('hidden 2', 'reads hidden 1', net.hidden[1], 1),
+      `<div class="mc-layer" data-ctl="out">
         <div class="mc-layer-head"><b>output</b><span class="reads">reads hidden ${os} · sigmoid</span></div>
         ${this.unitRow(net.out, 2, 0, OUT_COLOR, 'out', false)}
       </div>`,
     ].join('');
   }
 
-  private layerBlock(title: string, note: string, units: Unit[], layer: number, min: number): string {
+  private layerBlock(title: string, note: string, units: Unit[], layer: 0 | 1): string {
+    const removable = this.session.canRemove(layer);
     const rows = units
-      .map((u, i) => this.unitRow(u, layer, i, UNIT_COLORS[i], `u${i + 1}`, units.length > min))
+      .map((u, i) => this.unitRow(u, layer, i, UNIT_COLORS[i], `u${i + 1}`, removable))
       .join('');
-    const addBtn = units.length < MAX_UNITS
-      ? `<button class="btn add" data-layer="${layer}">+ add unit</button>`
+    const addBtn = this.session.canAdd(layer)
+      ? `<button class="btn add" data-ctl="add" data-layer="${layer}">+ add unit</button>`
       : '';
     const empty = units.length === 0
       ? `<p class="empty-note">no units — output reads hidden 1</p>`
       : '';
-    return `<div class="mc-layer">
+    const ctl = layer === 1 ? ' data-ctl="h2"' : '';
+    return `<div class="mc-layer"${ctl}>
       <div class="mc-layer-head"><b>${title}</b><span class="reads">${note}</span></div>
       ${rows}${empty}${addBtn}
     </div>`;
@@ -197,7 +202,7 @@ export class MobileControls {
     return `<div class="unit-row" style="--c:${color}">
       <i class="swatch"></i>
       <span class="uname">${name}</span>
-      <input type="range" min="-3" max="3" step="0.01" value="${u.b}"
+      <input type="range" min="-3" max="3" step="0.01" value="${u.b}" data-ctl="bias"
         data-layer="${layer}" data-idx="${idx}" aria-label="bias of ${name}" />
       <output>${u.b.toFixed(2)}</output>
       ${x}

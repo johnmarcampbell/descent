@@ -54,6 +54,13 @@ export class History {
     this.notify();
   }
 
+  /** Forget every mark, e.g. when the session jumps to an unrelated state. */
+  reset(): void {
+    this.undoStack.length = 0;
+    this.redoStack.length = 0;
+    this.notify();
+  }
+
   undo(): void {
     const now = this.session.snapshot();
     // Skip marks whose gesture ended up changing nothing (grab-no-move).

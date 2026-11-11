@@ -10,6 +10,7 @@ import { DATASET_NAMES } from './datasets';
 import { wireLayerNav } from './desktop/nav';
 import { wirePointerDrag } from './desktop/pointer';
 import { createIntro } from './intro';
+import { bootTutorial } from './tutorial/coach';
 
 // Desktop composition root: construct the modules, wire them together,
 // start the loop. A mobile build is a sibling of this file — same session,
@@ -19,6 +20,7 @@ const session = new Session('rings');
 
 const canvas = document.getElementById('gl') as HTMLCanvasElement;
 const viewEls = [0, 1, 2].map((i) => document.getElementById(`view-${i}`)!);
+const appEl = document.getElementById('app')!;
 const viewsEl = document.getElementById('views')!;
 const navAsc = document.getElementById('nav-asc') as HTMLButtonElement;
 const navDesc = document.getElementById('nav-desc') as HTMLButtonElement;
@@ -86,20 +88,29 @@ window.addEventListener('keydown', (e) => {
 });
 
 session.subscribe((change) => {
-  if (change === 'structure') panel.renderStructure(session.net);
+  if (change === 'dataset') panel.showDataset(session.datasetName);
+  if (change === 'structure') panel.renderStructure(session);
   panel.updateScore(session.res.accuracy, session.res.loss);
   // canUndo depends on how the state compares to the marks, so it can flip
   // on any mutation — not only on history events.
   panel.setHistoryState(history.canUndo, history.canRedo);
 });
-panel.renderStructure(session.net);
+panel.renderStructure(session);
 panel.updateScore(session.res.accuracy, session.res.loss);
 
 wireLayerNav(layers, viewsEl, viewEls, navAsc, navDesc);
 wirePointerDrag(dragger, stage, viewsEl, { onGrab: () => history.mark() });
 
-// How-to-play splash (first visit + a floating ? to reopen).
-document.body.appendChild(createIntro('desktop').button);
+const tutorial = bootTutorial(session, history, {
+  root: appEl,
+  slot: viewsEl,
+  stage,
+  reveal: (layer) => layers.reveal(session.spaceOf(layer)),
+});
+
+// How-to-play splash (first visit + a floating ? to reopen), forking into the tutorial;
+// built after the tutorial so a level booted from ?level=N skips it.
+document.body.appendChild(createIntro('desktop', tutorial).button);
 
 stage.start();
 
@@ -111,6 +122,7 @@ Object.defineProperty(window, '__descent', {
     layers,
     dragger,
     history,
+    tutorial,
     net: session.net,
     vp: stage.vp,
     getEntries: () => stage.entries,

@@ -4,6 +4,7 @@ import { Session } from './session';
 import { DragController } from './drag';
 import type { DragSurface } from './drag';
 import type { StageEntry } from './viz/stage';
+import { clientOf } from './viz/stage';
 import { ArrowGizmo, W_SCALE } from './viz/arrow';
 import { MAX_W, MIN_W } from './network';
 
@@ -161,5 +162,21 @@ describe('DragController', () => {
     drag.begin(0, ...screenOf(camera, tip));
     drag.move(...screenOf(camera, tip.clone().multiplyScalar(1.5)));
     expect(listener).toHaveBeenCalledWith('values');
+  });
+});
+
+describe('clientOf', () => {
+  it('projects into an offset cell, landing where the drag controller picks', () => {
+    const session = new Session();
+    const { surface, entries, camera } = makeSurface(session);
+    const rect = { left: 120, top: 80, width: 300, height: 200 };
+    camera.aspect = rect.width / rect.height;
+    camera.updateProjectionMatrix();
+    const drag = new DragController(session, { ...surface, cellRect: () => rect });
+
+    // The camera looks at the origin, so it lands dead centre of the cell.
+    expect(clientOf(new THREE.Vector3(), camera, rect)).toEqual({ x: 270, y: 180 });
+    const { x, y } = clientOf(tipOf(session), camera, rect);
+    expect(drag.pick(0, x, y)).toBe(entries[0]);
   });
 });

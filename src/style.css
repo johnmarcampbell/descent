@@ -483,6 +483,17 @@ input[type='range']::-moz-range-thumb {
 
 .help b { color: var(--accent); font-weight: 500; }
 
+/* ---------- tutorial coach (drawn by src/tutorial/coach.css) ---------- */
+
+#views > .coach {
+  left: 50%;
+  bottom: 96px; /* clear of the nav pills at bottom 44px */
+  transform: translateX(-50%);
+  width: min(580px, calc(100% - 48px));
+}
+/* focus mode docks a minimap bottom-right: keep to its left */
+#views.focus > .coach { left: 24px; transform: none; }
+
 /* ---------- small screens ---------- */
 
 @media (max-width: 980px) {

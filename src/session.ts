@@ -17,11 +17,12 @@ import { generate, N_POINTS } from './datasets';
 export type SessionChange = 'values' | 'structure' | 'dataset';
 export type SessionListener = (change: SessionChange) => void;
 
-/** A full game state: the whole network plus which dataset it's played on. */
+/** A full game state: the whole network, which dataset it's played on, and its limits. */
 export interface Snapshot {
   hidden: [Unit[], Unit[]];
   out: Unit;
   dataset: string;
+  caps: [number, number]; // max units per hidden layer
 }
 
 function cloneUnit(u: Unit): Unit {
@@ -36,6 +37,7 @@ export class Session {
   readonly res: ForwardResult = allocResult(N_POINTS);
   private _data: Dataset;
   private _datasetName: string;
+  private caps: [number, number] = [MAX_UNITS, MAX_UNITS];
   private readonly listeners: SessionListener[] = [];
 
   constructor(datasetName = 'rings') {
@@ -96,8 +98,12 @@ export class Session {
     this.notify('values');
   }
 
+  canAdd(layer: 0 | 1): boolean {
+    return this.net.hidden[layer].length < this.caps[layer];
+  }
+
   addUnit(layer: 0 | 1): void {
-    if (this.net.hidden[layer].length >= MAX_UNITS) return;
+    if (!this.canAdd(layer)) return;
 
     // The first hidden-2 unit *promotes* the output unit: the player tuned
     // that vector against hidden-1's space, and this transition is the only
@@ -116,7 +122,13 @@ export class Session {
     this.notify('structure');
   }
 
+  /** Hidden 1 keeps at least one unit; hidden 2 may empty out. */
+  canRemove(layer: 0 | 1): boolean {
+    return this.net.hidden[layer].length > (layer === 0 ? 1 : 0);
+  }
+
   removeUnit(layer: 0 | 1, idx: number): void {
+    if (!this.canRemove(layer)) return;
     this.net.hidden[layer].splice(idx, 1);
     this.recompute();
     this.notify('structure');
@@ -135,6 +147,7 @@ export class Session {
       hidden: [this.net.hidden[0].map(cloneUnit), this.net.hidden[1].map(cloneUnit)],
       out: cloneUnit(this.net.out),
       dataset: this._datasetName,
+      caps: [...this.caps],
     };
   }
 
@@ -148,6 +161,7 @@ export class Session {
     this.net.hidden[0].splice(0, Infinity, ...s.hidden[0].map(cloneUnit));
     this.net.hidden[1].splice(0, Infinity, ...s.hidden[1].map(cloneUnit));
     this.net.out = cloneUnit(s.out);
+    this.caps = [...s.caps];
     this.recompute();
     if (datasetChanged) this.notify('dataset');
     this.notify('structure');

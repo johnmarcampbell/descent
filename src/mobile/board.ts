@@ -83,5 +83,8 @@ export function bootBoard(app: HTMLElement, canvas: HTMLCanvasElement, session: 
   });
 
   layout();
-  return { stage };
+  return {
+    stage,
+    coach: { slot: panes, reveal: (layer) => layers.reveal(session.spaceOf(layer)) },
+  };
 }
