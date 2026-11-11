@@ -16,7 +16,7 @@ const GESTURES: Record<Mode, { orbit: string; layers: string }> = {
     layers: '‹ › or the DESCEND button',
   },
   mobile: {
-    orbit: 'one finger orbits · pinch to zoom',
+    orbit: 'one finger orbits · two fingers pan and zoom',
     layers: '‹ › to page · tap the minimap to jump',
   },
 };

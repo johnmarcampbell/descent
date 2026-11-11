@@ -35,8 +35,8 @@ export interface MobileControlsOpts {
 }
 
 const HELP: Record<ProtoName, string> = {
-  deck: 'drag an <b>arrow tip</b> to aim a weight — grabbing also <b>selects</b> it for the quick bar up top · one finger orbits · pinch zooms · <b>‹ ›</b> pages through layers · tap the <b>inset</b> to jump there',
-  board: 'drag an <b>arrow tip</b> to aim a weight · one finger orbits · pinch zooms · <b>tabs</b> choose the visible pair',
+  deck: 'drag an <b>arrow tip</b> to aim a weight — grabbing also <b>selects</b> it for the quick bar up top · one finger orbits · two fingers pan and zoom · <b>‹ ›</b> pages through layers · tap the <b>inset</b> to jump there',
+  board: 'drag an <b>arrow tip</b> to aim a weight · one finger orbits · two fingers pan and zoom · <b>tabs</b> choose the visible pair',
 };
 
 export class MobileControls {

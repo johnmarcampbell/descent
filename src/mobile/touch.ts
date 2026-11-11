@@ -7,6 +7,21 @@ import type { Stage, StageEntry } from '../viz/stage';
 
 const TOUCH_HIT_SCALE = 2.4;
 
+/** How far, in world units, a pan may carry a view's orbit centre from the origin. */
+const PAN_RADIUS = 1.5;
+
+/**
+ * Two fingers pan a view as well as pinch-zoom it. OrbitControls already maps a
+ * two-finger touch to dolly + pan; the views ship with pan off, so this turns it on
+ * and bounds it so the data cannot be dragged out of reach.
+ */
+export function enableTwoFingerPan(stage: Stage): void {
+  for (const { controls } of stage.vp.views) {
+    controls.enablePan = true;
+    controls.maxTargetRadius = PAN_RADIUS;
+  }
+}
+
 export interface TouchDragOpts {
   /** Called when a grab succeeds, before any weight changes (undo marks, selection). */
   onGrab?: (entry: StageEntry) => void;
