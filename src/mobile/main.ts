@@ -4,7 +4,7 @@ import { DragController } from '../drag';
 import { History } from '../history';
 import { bootDeck } from './deck';
 import { bootBoard } from './board';
-import { wireTouchDrag } from './touch';
+import { enableTwoFingerPan, wireTouchDrag } from './touch';
 import { createIntro } from '../intro';
 import { bootTutorial } from '../tutorial/coach';
 import type { ProtoName } from './controls';
@@ -33,6 +33,8 @@ function boot(proto: ProtoName): void {
     },
     onRelease: (entry) => ui.onRelease?.(entry),
   });
+
+  enableTwoFingerPan(stage);
 
   const tutorial = bootTutorial(session, history, { root: app, stage, ...ui.coach });
 
